@@ -85,17 +85,19 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
 
           <button
             onClick={onStart}
-            className="w-full py-4 bg-white text-black hover:bg-white/90 font-black text-[17px] rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-white text-black hover:bg-white/90 font-black text-[17px] rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center justify-center gap-2"
           >
             Start Game 🚀
           </button>
-          <span className="text-[11px] text-white/40 mt-1.5 font-medium">Press Space or Enter to start</span>
+          <span className="text-[11px] text-white/40 mt-1.5 mb-3.5 font-medium">Press Space or Enter to start</span>
 
           <button
             onClick={onOpenMultiplayer}
-            className="mt-4 text-[12px] text-white/60 hover:text-[#4285F4] transition-colors flex items-center gap-1.5"
+            className="w-full py-3 px-4 rounded-full bg-gradient-to-r from-[#4285F4]/20 to-[#BB55A1]/20 hover:from-[#4285F4]/35 hover:to-[#BB55A1]/35 border border-[#4285F4]/40 hover:border-[#4285F4] text-white font-bold text-[13px] md:text-[14px] transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-lg cursor-pointer group"
           >
-            <span>👥</span> Race with friends? Open Multiplayer Room
+            <span className="text-base">👥</span>
+            <span>Race with friends? Open Multiplayer Room</span>
+            <span className="text-xs text-white/50 group-hover:translate-x-0.5 transition-transform">→</span>
           </button>
         </div>
       </div>
