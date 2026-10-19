@@ -11,6 +11,7 @@ const AVATARS = ['🐱', '😸', '😻', '😼', '😽', '🦁', '🐯', '🐾',
 
 interface MultiplayerModalProps {
   isOpen: boolean;
+  initialTab?: 'create' | 'join';
   onClose: () => void;
   room: RoomState | null;
   onRoomJoined: (room: RoomState) => void;
@@ -19,17 +20,25 @@ interface MultiplayerModalProps {
 
 const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   isOpen,
+  initialTab = 'create',
   onClose,
   room,
   onRoomJoined,
   onLeaveRoom,
 }) => {
-  const [tab, setTab] = useState<'create' | 'join'>('create');
+  const [tab, setTab] = useState<'create' | 'join'>(initialTab);
   const [joinCode, setJoinCode] = useState('');
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setTab(initialTab || 'create');
+      setErrorMsg('');
+    }
+  }, [isOpen, initialTab]);
 
   const profile = multiplayerService.getProfile();
   const [playerName, setPlayerName] = useState(profile.name);
@@ -125,7 +134,7 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   const isLobbyWaiting = room?.status === 'waiting';
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[110] backdrop-blur-md p-4 animate-in fade-in duration-200">
       <div 
         className="p-[1.5px] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
         style={gradientBorderStyle}

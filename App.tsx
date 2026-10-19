@@ -72,6 +72,7 @@ const App: React.FC = () => {
   const [stageClearBonus, setStageClearBonus] = useState(0);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
+  const [multiplayerModalTab, setMultiplayerModalTab] = useState<'create' | 'join'>('create');
 
   // Multiplayer room state and toast notifications
   const [multiplayerRoom, setMultiplayerRoom] = useState<RoomState | null>(null);
@@ -614,7 +615,10 @@ const App: React.FC = () => {
         historyCount={history.length}
         currentRoomId={multiplayerRoom?.id}
         roomPlayerCount={multiplayerRoom ? Object.keys(multiplayerRoom.players).length : 0}
-        onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
+        onOpenMultiplayer={() => {
+          setMultiplayerModalTab('create');
+          setIsMultiplayerOpen(true);
+        }}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenInfo={() => setIsInfoOpen(true)}
       />
@@ -638,6 +642,7 @@ const App: React.FC = () => {
       {/* Multiplayer Battle Room & Leaderboard Modal */}
       <MultiplayerModal
         isOpen={isMultiplayerOpen}
+        initialTab={multiplayerModalTab}
         onClose={() => setIsMultiplayerOpen(false)}
         room={multiplayerRoom}
         onRoomJoined={(r) => {
@@ -750,7 +755,7 @@ const App: React.FC = () => {
       )}
 
       {/* Solo Start Game Overlay (Before Start button is clicked in solo) */}
-      {!multiplayerRoom && !isSoloStarted && !gameResult && (
+      {!multiplayerRoom && !isSoloStarted && !gameResult && !isMultiplayerOpen && (
         <SoloStartOverlay
           stage={stage}
           stageName={currentStageConfig.name}
@@ -758,7 +763,10 @@ const App: React.FC = () => {
           totalLevels={totalLevelsInCurrentStage}
           bestScore={bestScore}
           onStart={handleSoloStart}
-          onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
+          onOpenMultiplayer={() => {
+            setMultiplayerModalTab('create');
+            setIsMultiplayerOpen(true);
+          }}
         />
       )}
 
