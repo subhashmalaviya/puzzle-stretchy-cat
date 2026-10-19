@@ -108,7 +108,49 @@ const Cell: React.FC<CellProps> = ({
             </svg>
           </div>
         );
-        default: return null;
+      case CellType.WATER:
+        return (
+          <div className="z-10 w-full h-full flex items-center justify-center p-1 opacity-90 animate-pulse">
+            <svg viewBox="0 0 24 24" fill="none" className="w-[60%] h-[60%]">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="#38BDF8" fillOpacity="0.9" stroke="#E0F2FE" strokeWidth="1.5" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        );
+      case CellType.STAR:
+        return (
+          <div className={commonClass}>
+            <svg viewBox="0 0 24 24" fill="none" className="w-full h-auto">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FBBC04" stroke="#FFF" strokeWidth="1"/>
+            </svg>
+          </div>
+        );
+      case CellType.PLANT:
+        return (
+          <div className="z-10 w-full h-full flex items-center justify-center opacity-40 pointer-events-none">
+            <svg viewBox="0 0 24 24" fill="none" className="w-[48%] h-[48%]">
+              <path d="M12 22V12M12 12C9 12 6 9 6 5C10 5 12 9 12 12ZM12 12C15 12 18 9 18 5C14 5 12 9 12 12Z" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        );
+      case CellType.COUCH:
+        return (
+          <div className="z-10 w-full h-full flex items-center justify-center opacity-35 pointer-events-none">
+            <svg viewBox="0 0 24 24" fill="none" className="w-[48%] h-[48%]">
+              <path d="M4 11V16H20V11M2 13V18M22 13V18M6 8H18C19.1 8 20 8.9 20 10V11H4V10C4 8.9 4.9 8 6 8Z" stroke="#E2E8F0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        );
+      case CellType.BOX:
+        return (
+          <div className="z-10 w-full h-full flex items-center justify-center opacity-30 pointer-events-none">
+            <svg viewBox="0 0 24 24" fill="none" className="w-[45%] h-[45%]">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke="#94A3B8" strokeWidth="1.8"/>
+              <line x1="3" y1="9" x2="21" y2="9" stroke="#94A3B8" strokeWidth="1.5"/>
+              <line x1="12" y1="9" x2="12" y2="21" stroke="#94A3B8" strokeWidth="1.5"/>
+            </svg>
+          </div>
+        );
+      default: return null;
     }
   };
 
@@ -118,10 +160,14 @@ const Cell: React.FC<CellProps> = ({
     backgroundSize: `${gridWidth * 100}% ${gridHeight * 100}%`,
     backgroundRepeat: "no-repeat",
   } : {
-    backgroundColor: [CellType.BOX, CellType.COUCH, CellType.PLANT, CellType.WATER].includes(type) 
-      ? "#37383B" 
-      : "#9BA0A6BF"
+    backgroundColor: type === CellType.WATER
+      ? "#0C2340"
+      : [CellType.BOX, CellType.COUCH, CellType.PLANT].includes(type) 
+      ? "#27282C" 
+      : "#9BA0A6BF",
+    boxShadow: type === CellType.WATER ? "inset 0 0 8px rgba(56, 189, 248, 0.4)" : undefined,
   };
+
 
   return (
     <div

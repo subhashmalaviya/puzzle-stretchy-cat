@@ -29,6 +29,9 @@ export interface Point {
 
 export interface LevelData {
   id: number;
+  stage: number;
+  levelInStage: number;
+  totalLevelsInStage: number;
   width: number;
   height: number;
   grid: CellType[][];
@@ -48,4 +51,44 @@ export interface GameState {
   multiplier: number;
   treats: number;
   collectedItems: string[]; // Stores coordinates "x,y" of collected items
+}
+
+export interface ScoreHistoryEntry {
+  id: string;
+  score: number;
+  stage: number;
+  level: number;
+  timestamp: number;
+  reason: 'timeout' | 'reset' | 'stage_cleared' | 'victory';
+}
+
+export interface RoomPlayer {
+  id: string;
+  name: string;
+  avatar: string;
+  score: number;
+  stage: number;
+  level: number;
+  status: 'waiting' | 'ready' | 'playing' | 'timeout' | 'reset' | 'won';
+  isReady: boolean;
+  lastActive: number;
+  color: string;
+}
+
+export interface RoomState {
+  id: string;
+  createdAt: number;
+  hostId: string;
+  status: 'waiting' | 'countdown' | 'playing' | 'ended';
+  endedBy?: string;
+  countdownValue?: number;
+  players: Record<string, RoomPlayer>;
+}
+
+
+export interface MultiplayerToastMsg {
+  id: string;
+  message: string;
+  type: 'rank' | 'stage' | 'death' | 'info';
+  timestamp: number;
 }

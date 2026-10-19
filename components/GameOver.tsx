@@ -3,44 +3,95 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-
 import React from 'react';
 
 interface GameOverProps {
   type: 'win' | 'lose';
   score: number;
+  bestScore?: number;
+  stage?: number;
+  roomRank?: number | null;
+  totalRoomPlayers?: number;
   onAction: () => void;
+  onOpenHistory?: () => void;
+  onOpenLeaderboard?: () => void;
 }
 
-const GameOver: React.FC<GameOverProps> = ({ type, score, onAction }) => {
+const GameOver: React.FC<GameOverProps> = ({ 
+  type, 
+  score, 
+  bestScore = 0, 
+  stage = 1,
+  roomRank,
+  totalRoomPlayers = 0,
+  onAction,
+  onOpenHistory,
+  onOpenLeaderboard,
+}) => {
   const isWin = type === 'win';
+  const isNewBest = score >= bestScore && score > 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-xl p-[55px]">
-      <div className="bg-black text-white px-7.5 lg:px-10 py-10 lg:py-12.5 rounded-3xl text-center w-full rainbow-border animate-rotate-gradient animate-in fade-in zoom-in duration-200 flex flex-col items-center min-w-xs max-w-md">
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 backdrop-blur-xl p-6 animate-in fade-in duration-200">
+      <div className="bg-black text-white px-7 lg:px-10 py-8 lg:py-10 rounded-3xl text-center w-full rainbow-border animate-rotate-gradient flex flex-col items-center min-w-xs max-w-md shadow-2xl">
         
-        <h2 className="text-white text-[24px] md:text-[30px] font-medium leading-tight tracking-tight px-6 w-[230px] md:w-[280px]">
+        <h2 className="text-white text-[24px] md:text-[30px] font-bold leading-tight tracking-tight px-4">
           {isWin 
-            ? "You won!" 
+            ? "Stage Champion! 🎉" 
             : "Oh no! You ran out of time"}
         </h2>
 
-        <div className="mt-[25px] flex flex-col items-center">
-          <div className="text-white text-[72px] md:text-[84px] font-medium leading-[0.9] tracking-[-3px]">
+        {isNewBest ? (
+          <div className="mt-3 bg-amber-400/20 border border-amber-400/50 text-amber-300 text-[13px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
+            <span>🏆</span> New Personal Best!
+          </div>
+        ) : (
+          <div className="mt-2 text-white/60 text-[13px]">
+            Reached Stage {stage} • Best: {bestScore.toLocaleString()} pts
+          </div>
+        )}
+
+        {/* Room ranking banner if in a multiplayer room */}
+        {roomRank && (
+          <div className="mt-2 bg-[#4285F4]/20 border border-[#4285F4]/40 text-blue-200 text-[12px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span>👥</span> Room Rank: #{roomRank} of {totalRoomPlayers}
+          </div>
+        )}
+
+        <div className="mt-[20px] flex flex-col items-center">
+          <div className="text-white text-[64px] md:text-[80px] font-extrabold leading-[0.9] tracking-[-3px] tabular-nums">
             {score.toLocaleString()}
           </div>
-          <div className="text-white/60 text-[16px] font-medium mt-[10px]">
-            Points
+          <div className="text-white/60 text-[15px] font-medium mt-[8px]">
+            Final Points
           </div>
         </div>
 
-        <div className="mt-[30px] flex flex-col items-center w-full px-8 max-w-[259px]">
+        <div className="mt-[25px] flex flex-col gap-2.5 items-center w-full px-4 max-w-[280px]">
           <button
             onClick={onAction}
-            className="flex justify-center items-center py-4 w-full md:w-[259px] cursor-pointer bg-white text-black font-medium text-[18px] md:text-[16px] rounded-[120px] transition-all duration-200 hover:brightness-110 active:scale-95"
+            className="flex justify-center items-center py-3.5 w-full cursor-pointer bg-white text-black font-bold text-[17px] rounded-full transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg"
           >
-            {isWin ? 'Play again' : 'Retry'}
+            {isWin ? 'Play Again' : 'Retry'}
           </button>
+
+          {onOpenLeaderboard && (
+            <button
+              onClick={onOpenLeaderboard}
+              className="flex justify-center items-center py-2.5 w-full cursor-pointer bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold text-[14px] rounded-full transition-all duration-200 active:scale-95 shadow-md"
+            >
+              👥 View Room Leaderboard
+            </button>
+          )}
+
+          {onOpenHistory && (
+            <button
+              onClick={onOpenHistory}
+              className="flex justify-center items-center py-2 w-full cursor-pointer bg-white/10 hover:bg-white/20 text-white font-medium text-[13px] rounded-full transition-all duration-200 active:scale-95 border border-white/10"
+            >
+              📜 View Score History
+            </button>
+          )}
         </div>
       </div>
     </div>
