@@ -1,19 +1,30 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 
 import { RoomPlayer, RoomState, MultiplayerToastMsg } from '../types';
 import { STORAGE_KEYS } from '../constants';
+import mqtt, { MqttClient } from 'mqtt';
 
 const AVATARS = ['🐱', '😸', '😻', '😼', '😽', '🦁', '🐯', '🐾', '🐈'];
 const COLOR_OPTIONS = ['#4285F4', '#EA4335', '#FBBC04', '#38A852', '#BB55A1', '#00ACC1'];
+
+// Global MQTT brokers for instant cross-device WebSockets (works on mobile, Render Static, anywhere)
+const MQTT_BROKERS = [
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://test.mosquitto.org:8081',
+];
 
 class MultiplayerService {
   private profile: { id: string; name: string; avatar: string; color: string };
   private room: RoomState | null = null;
   private broadcastChannel: BroadcastChannel | null = null;
   private eventSource: EventSource | null = null;
+  private mqttClient: MqttClient | null = null;
+  private currentTopic: string | null = null;
+  private heartbeatInterval: any = null;
+
   private roomListeners = new Set<(room: RoomState | null) => void>();
   private toastListeners = new Set<(toast: MultiplayerToastMsg) => void>();
   private matchStartListeners = new Set<() => void>();
@@ -72,34 +83,241 @@ class MultiplayerService {
     }
   }
 
+  private getRoomTopic(roomId: string): string {
+    return `stretchy_cat_v4/rooms/${roomId.toUpperCase()}`;
+  }
+
+  private initMQTT(roomId: string, onConnected?: () => void) {
+    this.closeMQTT();
+    const topic = this.getRoomTopic(roomId);
+    this.currentTopic = topic;
+
+    try {
+      const brokerUrl = MQTT_BROKERS[0];
+      const client = mqtt.connect(brokerUrl, {
+        keepalive: 30,
+        clientId: `scat_${this.profile.id}_${Math.random().toString(36).substring(2, 6)}`,
+        clean: true,
+        reconnectPeriod: 2000,
+        connectTimeout: 7000,
+      });
+
+      this.mqttClient = client;
+
+      client.on('connect', () => {
+        client.subscribe(topic, { qos: 0 }, (err) => {
+          if (!err && onConnected) {
+            onConnected();
+          }
+        });
+      });
+
+      client.on('message', (receivedTopic, payload) => {
+        if (receivedTopic !== topic) return;
+        try {
+          const msg = JSON.parse(payload.toString());
+          this.handleNetworkMessage(msg);
+        } catch {}
+      });
+
+      client.on('error', () => {
+        // Fallback gracefully to secondary broker if first has network issue
+      });
+    } catch (e) {
+      console.warn('MQTT initialization failed', e);
+    }
+  }
+
+  private closeMQTT() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    if (this.mqttClient) {
+      try {
+        if (this.currentTopic) {
+          this.mqttClient.unsubscribe(this.currentTopic);
+        }
+        this.mqttClient.end(true);
+      } catch {}
+      this.mqttClient = null;
+    }
+    this.currentTopic = null;
+  }
+
+  private publishNetworkMessage(msg: any) {
+    // 1. MQTT for cross-device / internet
+    if (this.mqttClient && this.mqttClient.connected && this.currentTopic) {
+      try {
+        this.mqttClient.publish(this.currentTopic, JSON.stringify(msg));
+      } catch {}
+    }
+
+    // 2. BroadcastChannel for local tabs
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage(msg);
+      } catch {}
+    }
+  }
+
+  private handleNetworkMessage(msg: any) {
+    if (!msg || !this.room) return;
+    const { type, room, player, playerId, updates, endedBy, toast, senderId } = msg;
+
+    // Ignore messages sent by ourselves (except when explicit)
+    if (senderId === this.profile.id && type !== 'ROOM_STATE') {
+      return;
+    }
+
+    switch (type) {
+      case 'ROOM_STATE':
+        if (room && room.id === this.room.id) {
+          const wasWaiting = this.room.status === 'waiting';
+          const wasPlaying = this.room.status === 'playing' || this.room.status === 'countdown';
+          const isEnded = room.status === 'ended';
+          const isRematch = this.room.status === 'ended' && room.status === 'waiting';
+
+          this.applyRoomUpdate(room);
+
+          if (wasWaiting && (room.status === 'countdown' || room.status === 'playing')) {
+            this.notifyMatchStart();
+          } else if (wasPlaying && isEnded) {
+            this.notifyMatchEnd(endedBy || room.endedBy || 'A player', room);
+          } else if (isRematch) {
+            this.notifyRematch(room);
+          }
+        }
+        break;
+
+      case 'JOIN_REQUEST':
+        // Host receives join request and welcomes player into room
+        if (this.room.hostId === this.profile.id && player && player.id !== this.profile.id) {
+          const updatedPlayers = {
+            ...this.room.players,
+            [player.id]: {
+              ...player,
+              isReady: false,
+              status: 'waiting' as const,
+              lastActive: Date.now(),
+            }
+          };
+          const updatedRoom: RoomState = {
+            ...this.room,
+            players: updatedPlayers,
+          };
+          this.applyRoomUpdate(updatedRoom);
+          this.publishNetworkMessage({
+            type: 'ROOM_STATE',
+            room: updatedRoom,
+            senderId: this.profile.id,
+          });
+
+          this.emitToast({
+            id: Date.now().toString(),
+            message: `👋 ${player.name} joined the room!`,
+            type: 'info',
+            timestamp: Date.now(),
+          });
+        }
+        break;
+
+      case 'TOGGLE_READY':
+        if (this.room.hostId === this.profile.id && playerId && this.room.players[playerId]) {
+          const targetPlayer = this.room.players[playerId];
+          const newReady = !targetPlayer.isReady;
+          const updatedRoom: RoomState = {
+            ...this.room,
+            players: {
+              ...this.room.players,
+              [playerId]: {
+                ...targetPlayer,
+                isReady: newReady,
+                status: newReady ? 'ready' : 'waiting',
+                lastActive: Date.now(),
+              }
+            }
+          };
+          this.applyRoomUpdate(updatedRoom);
+          this.publishNetworkMessage({
+            type: 'ROOM_STATE',
+            room: updatedRoom,
+            senderId: this.profile.id,
+          });
+        }
+        break;
+
+      case 'START_MATCH':
+        if (room && room.id === this.room.id) {
+          this.applyRoomUpdate(room);
+          this.notifyMatchStart();
+        }
+        break;
+
+      case 'PLAYER_UPDATE':
+        if (playerId && this.room.players[playerId] && updates) {
+          const updatedRoom: RoomState = {
+            ...this.room,
+            players: {
+              ...this.room.players,
+              [playerId]: {
+                ...this.room.players[playerId],
+                ...updates,
+                lastActive: Date.now(),
+              }
+            }
+          };
+          this.applyRoomUpdate(updatedRoom);
+        }
+        break;
+
+      case 'MATCH_END':
+        if (room && room.id === this.room.id) {
+          this.applyRoomUpdate(room);
+          this.notifyMatchEnd(endedBy || room.endedBy || 'A player', room);
+        }
+        break;
+
+      case 'REMATCH':
+        if (room && room.id === this.room.id) {
+          this.applyRoomUpdate(room);
+          this.notifyRematch(room);
+        }
+        break;
+
+      case 'PLAYER_LEFT':
+        if (playerId && this.room.players[playerId]) {
+          const leavingName = this.room.players[playerId].name;
+          delete this.room.players[playerId];
+          if (this.room.hostId === playerId) {
+            const remaining = Object.keys(this.room.players);
+            if (remaining.length > 0) this.room.hostId = remaining[0];
+          }
+          const updatedRoom = { ...this.room };
+          this.applyRoomUpdate(updatedRoom);
+          this.emitToast({
+            id: Date.now().toString(),
+            message: `🏃 ${leavingName} left the room`,
+            type: 'info',
+            timestamp: Date.now(),
+          });
+        }
+        break;
+
+      case 'TOAST':
+        if (toast) {
+          this.emitToast(toast);
+        }
+        break;
+    }
+  }
+
   private initBroadcastChannel() {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
         this.broadcastChannel = new BroadcastChannel('stretchy_cat_mp_channel');
         this.broadcastChannel.onmessage = (event) => {
-          const { type, room, toast, endedBy } = event.data || {};
-          if ((type === 'ROOM_SYNC' || type === 'UPDATE') && room) {
-            if (this.room && this.room.id === room.id) {
-              this.applyRoomUpdate(room);
-            }
-          } else if (type === 'START_MATCH' && room) {
-            if (this.room && this.room.id === room.id) {
-              this.applyRoomUpdate(room);
-              this.notifyMatchStart();
-            }
-          } else if (type === 'MATCH_END' && room) {
-            if (this.room && this.room.id === room.id) {
-              this.applyRoomUpdate(room);
-              this.notifyMatchEnd(endedBy || room.endedBy || 'A player', room);
-            }
-          } else if (type === 'REMATCH' && room) {
-            if (this.room && this.room.id === room.id) {
-              this.applyRoomUpdate(room);
-              this.notifyRematch(room);
-            }
-          } else if (type === 'TOAST' && toast) {
-            this.emitToast(toast);
-          }
+          this.handleNetworkMessage(event.data);
         };
       } catch (e) {
         console.warn('BroadcastChannel initialization failed', e);
@@ -114,20 +332,7 @@ class MultiplayerService {
           try {
             const parsed = JSON.parse(e.newValue);
             if (this.room && this.room.id === parsed.id) {
-              const wasWaiting = this.room.status === 'waiting';
-              const wasPlaying = this.room.status === 'playing' || this.room.status === 'countdown';
-              const isEnded = parsed.status === 'ended';
-              const isRematch = this.room.status === 'ended' && parsed.status === 'waiting';
-
               this.applyRoomUpdate(parsed);
-
-              if (wasWaiting && (parsed.status === 'countdown' || parsed.status === 'playing')) {
-                this.notifyMatchStart();
-              } else if (wasPlaying && isEnded) {
-                this.notifyMatchEnd(parsed.endedBy || 'A player', parsed);
-              } else if (isRematch) {
-                this.notifyRematch(parsed);
-              }
             }
           } catch {}
         }
@@ -135,45 +340,9 @@ class MultiplayerService {
     }
   }
 
-  private connectSSE(roomId: string) {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
-
-    try {
-      this.eventSource = new EventSource(`/api/rooms/${roomId}/stream`);
-      this.eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.room) {
-            const wasWaiting = this.room?.status === 'waiting';
-            const wasPlaying = this.room?.status === 'playing' || this.room?.status === 'countdown';
-            const isEnded = data.room.status === 'ended';
-            const isRematch = this.room?.status === 'ended' && data.room.status === 'waiting';
-
-            this.applyRoomUpdate(data.room);
-
-            if (data.type === 'START_MATCH' || (wasWaiting && data.room.status === 'countdown')) {
-              this.notifyMatchStart();
-            } else if (data.type === 'MATCH_END' || (wasPlaying && isEnded)) {
-              this.notifyMatchEnd(data.endedBy || data.room.endedBy || 'A player', data.room);
-            } else if (data.type === 'REMATCH' || isRematch) {
-              this.notifyRematch(data.room);
-            }
-          }
-        } catch {}
-      };
-      this.eventSource.onerror = () => {
-        // SSE fallback is quiet; BroadcastChannel and storage take over
-      };
-    } catch {}
-  }
-
   private applyRoomUpdate(newRoom: RoomState) {
     if (!newRoom) return;
 
-    // Detect rank changes or milestones for notifications
     const sortedBefore = this.prevRankings;
     const sortedNow = Object.values(newRoom.players)
       .sort((a, b) => b.score - a.score)
@@ -238,26 +407,40 @@ class MultiplayerService {
     this.room = initialRoom;
     this.prevRankings = [player.id];
 
-    // Try backend API
+    // Initialize Global MQTT WebSocket for cross-device support
+    this.initMQTT(roomId, () => {
+      this.publishNetworkMessage({
+        type: 'ROOM_STATE',
+        room: this.room,
+        senderId: this.profile.id,
+      });
+    });
+
+    // Host heartbeat every 3 seconds to keep room synced across all devices
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = setInterval(() => {
+      if (this.room && this.room.hostId === this.profile.id) {
+        this.publishNetworkMessage({
+          type: 'ROOM_STATE',
+          room: this.room,
+          senderId: this.profile.id,
+        });
+      }
+    }, 3000);
+
+    // Also attempt local backend API if available
     try {
-      const res = await fetch('/api/rooms/create', {
+      fetch('/api/rooms/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, player }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.room) this.room = data.room;
-      }
+      }).catch(() => {});
     } catch {}
 
-    // Broadcast
-    this.broadcastChannel?.postMessage({ type: 'ROOM_SYNC', room: this.room });
     try {
       localStorage.setItem(STORAGE_KEYS.LAST_ROOM, JSON.stringify(this.room));
     } catch {}
 
-    this.connectSSE(roomId);
     this.notifyListeners();
     return this.room;
   }
@@ -279,55 +462,75 @@ class MultiplayerService {
       color: this.profile.color,
     };
 
-    let joinedRoom: RoomState | null = null;
+    // Prepare tentative local room state while waiting for host handshake
+    const tentativeRoom: RoomState = {
+      id: roomId,
+      createdAt: Date.now(),
+      hostId: 'waiting_for_host',
+      status: 'waiting',
+      players: { [player.id]: player },
+    };
 
-    // Check backend API
-    try {
-      const res = await fetch('/api/rooms/join', {
+    this.room = tentativeRoom;
+    this.notifyListeners();
+
+    return new Promise((resolve) => {
+      let resolved = false;
+
+      // Connect to global MQTT room topic
+      this.initMQTT(roomId, () => {
+        // Send Join Request to host
+        this.publishNetworkMessage({
+          type: 'JOIN_REQUEST',
+          player,
+          senderId: this.profile.id,
+        });
+      });
+
+      // Also listen on room sync
+      const checkListener = (r: RoomState | null) => {
+        if (r && r.id === roomId && r.hostId !== 'waiting_for_host' && !resolved) {
+          resolved = true;
+          this.roomListeners.delete(checkListener);
+          resolve(r);
+        }
+      };
+      this.roomListeners.add(checkListener);
+
+      // Attempt local backend API fallback
+      fetch('/api/rooms/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, player }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        joinedRoom = data.room;
-      }
-    } catch {}
-
-    // Fallback to local/broadcast if offline
-    if (!joinedRoom) {
-      const cached = localStorage.getItem(STORAGE_KEYS.LAST_ROOM);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.id === roomId) {
-            joinedRoom = parsed;
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.room && !resolved) {
+            resolved = true;
+            this.roomListeners.delete(checkListener);
+            this.applyRoomUpdate(data.room);
+            resolve(data.room);
           }
-        } catch {}
-      }
-      if (!joinedRoom) {
-        joinedRoom = {
-          id: roomId,
-          createdAt: Date.now(),
-          hostId: player.id,
-          status: 'waiting',
-          players: {},
-        };
-      }
-      joinedRoom.players[player.id] = player;
-    }
+        })
+        .catch(() => {});
 
-    this.room = joinedRoom;
-    this.prevRankings = Object.keys(this.room.players);
-
-    this.broadcastChannel?.postMessage({ type: 'ROOM_SYNC', room: this.room });
-    try {
-      localStorage.setItem(STORAGE_KEYS.LAST_ROOM, JSON.stringify(this.room));
-    } catch {}
-
-    this.connectSSE(roomId);
-    this.notifyListeners();
-    return this.room;
+      // Timeout fallback: if no host responds in 4.5s
+      setTimeout(() => {
+        if (!resolved) {
+          // If we received any room update with other players
+          if (this.room && Object.keys(this.room.players).length > 1) {
+            resolved = true;
+            this.roomListeners.delete(checkListener);
+            resolve(this.room);
+          } else {
+            // Still resolve with the tentative room so friend can see the lobby and retry handshake
+            resolved = true;
+            this.roomListeners.delete(checkListener);
+            resolve(this.room);
+          }
+        }
+      }, 4500);
+    });
   }
 
   public async toggleReady() {
@@ -347,17 +550,22 @@ class MultiplayerService {
     };
 
     this.applyRoomUpdate(updatedRoom);
-    this.broadcastChannel?.postMessage({ type: 'UPDATE', room: updatedRoom });
+    this.publishNetworkMessage({
+      type: 'TOGGLE_READY',
+      playerId: this.profile.id,
+      room: updatedRoom,
+      senderId: this.profile.id,
+    });
 
     try {
-      await fetch('/api/rooms/toggle-ready', {
+      fetch('/api/rooms/toggle-ready', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomId: this.room.id,
           playerId: this.profile.id,
         }),
-      });
+      }).catch(() => {});
     } catch {}
   }
 
@@ -376,18 +584,22 @@ class MultiplayerService {
     };
 
     this.applyRoomUpdate(updatedRoom);
-    this.broadcastChannel?.postMessage({ type: 'START_MATCH', room: updatedRoom });
+    this.publishNetworkMessage({
+      type: 'START_MATCH',
+      room: updatedRoom,
+      senderId: this.profile.id,
+    });
     this.notifyMatchStart();
 
     try {
-      await fetch('/api/rooms/start', {
+      fetch('/api/rooms/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomId: this.room.id,
           playerId: this.profile.id,
         }),
-      });
+      }).catch(() => {});
     } catch {}
   }
 
@@ -430,7 +642,7 @@ class MultiplayerService {
 
     this.applyRoomUpdate(updatedRoom);
 
-    // Broadcast toast if death or stage clear
+    // Toast notifications for events
     if (status === 'timeout' && prevStatus !== 'timeout') {
       const toast: MultiplayerToastMsg = {
         id: Date.now().toString(),
@@ -439,7 +651,7 @@ class MultiplayerService {
         timestamp: Date.now(),
       };
       this.emitToast(toast);
-      this.broadcastChannel?.postMessage({ type: 'TOAST', toast });
+      this.publishNetworkMessage({ type: 'TOAST', toast, senderId: this.profile.id });
     } else if (stage > prevStage) {
       const toast: MultiplayerToastMsg = {
         id: Date.now().toString(),
@@ -448,39 +660,46 @@ class MultiplayerService {
         timestamp: Date.now(),
       };
       this.emitToast(toast);
-      this.broadcastChannel?.postMessage({ type: 'TOAST', toast });
+      this.publishNetworkMessage({ type: 'TOAST', toast, senderId: this.profile.id });
     }
 
-    // Send to backend
-    fetch('/api/rooms/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        roomId: this.room.id,
-        playerId: this.profile.id,
-        updates,
-      }),
-    }).catch(() => {});
+    this.publishNetworkMessage({
+      type: 'PLAYER_UPDATE',
+      playerId: this.profile.id,
+      updates,
+      senderId: this.profile.id,
+    });
 
-    this.broadcastChannel?.postMessage({ type: 'UPDATE', room: updatedRoom });
+    try {
+      fetch('/api/rooms/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: this.room.id,
+          playerId: this.profile.id,
+          updates,
+        }),
+      }).catch(() => {});
+    } catch {}
   }
 
   public leaveRoom() {
     if (this.room && this.room.players[this.profile.id]) {
+      this.publishNetworkMessage({
+        type: 'PLAYER_LEFT',
+        playerId: this.profile.id,
+        senderId: this.profile.id,
+      });
       delete this.room.players[this.profile.id];
-      // If host left, pass host to next player
       if (this.room.hostId === this.profile.id) {
         const remaining = Object.keys(this.room.players);
         if (remaining.length > 0) {
           this.room.hostId = remaining[0];
         }
       }
-      this.broadcastChannel?.postMessage({ type: 'ROOM_SYNC', room: this.room });
     }
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+
+    this.closeMQTT();
     this.room = null;
     this.prevRankings = [];
     try {
@@ -561,11 +780,16 @@ class MultiplayerService {
     };
 
     this.applyRoomUpdate(updatedRoom);
-    this.broadcastChannel?.postMessage({ type: 'MATCH_END', room: updatedRoom, endedBy: name });
+    this.publishNetworkMessage({
+      type: 'MATCH_END',
+      room: updatedRoom,
+      endedBy: name,
+      senderId: this.profile.id,
+    });
     this.notifyMatchEnd(name, updatedRoom);
 
     try {
-      await fetch('/api/rooms/end-match', {
+      fetch('/api/rooms/end-match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -573,7 +797,7 @@ class MultiplayerService {
           playerId: this.profile.id,
           endedBy: name,
         }),
-      });
+      }).catch(() => {});
     } catch {}
   }
 
@@ -603,18 +827,22 @@ class MultiplayerService {
     };
 
     this.applyRoomUpdate(updatedRoom);
-    this.broadcastChannel?.postMessage({ type: 'REMATCH', room: updatedRoom });
+    this.publishNetworkMessage({
+      type: 'REMATCH',
+      room: updatedRoom,
+      senderId: this.profile.id,
+    });
     this.notifyRematch(updatedRoom);
 
     try {
-      await fetch('/api/rooms/rematch', {
+      fetch('/api/rooms/rematch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomId: this.room.id,
           playerId: this.profile.id,
         }),
-      });
+      }).catch(() => {});
     } catch {}
   }
 

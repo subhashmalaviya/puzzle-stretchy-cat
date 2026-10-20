@@ -366,3 +366,106 @@ footer {
   left: 48px;
   width: auto;
 }
+
+/* Custom smooth scrollbars for mobile & tabs */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.05);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 3D Keyframe Animations */
+@keyframes float3D {
+  0%, 100% {
+    transform: translateY(0px) rotateZ(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateZ(2deg);
+  }
+}
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+}
+@keyframes earTwitch {
+  0%, 88%, 100% {
+    transform: rotate(0deg);
+  }
+  91% {
+    transform: rotate(-10deg);
+  }
+  94% {
+    transform: rotate(8deg);
+  }
+}
+@keyframes blinkEye {
+  0%, 94%, 100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes orbit3D {
+  0% {
+    transform: rotate(0deg) translateX(42px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(42px) rotate(-360deg);
+  }
+}
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+.animate-float-3d {
+  animation: float3D 3.5s ease-in-out infinite;
+}
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+.animate-ear-left {
+  animation: earTwitch 4s ease-in-out infinite;
+  transform-origin: bottom right;
+}
+.animate-ear-right {
+  animation: earTwitch 4s ease-in-out infinite 0.25s;
+  transform-origin: bottom left;
+}
+.animate-blink {
+  animation: blinkEye 4s ease-in-out infinite;
+  transform-origin: center;
+}
+.animate-orbit-3d {
+  animation: orbit3D 7s linear infinite;
+}
+.animate-star-twinkle {
+  animation: starTwinkle 2s ease-in-out infinite;
+}

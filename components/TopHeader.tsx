@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import bgmService from '../services/bgmService';
 
 interface TopHeaderProps {
   stage: number;
@@ -34,6 +35,15 @@ const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenHistory,
   onOpenInfo,
 }) => {
+  const [isMusicMuted, setIsMusicMuted] = useState(bgmService.isMuted());
+
+  useEffect(() => {
+    const unsub = bgmService.subscribe((muted) => {
+      setIsMusicMuted(muted);
+    });
+    return () => unsub();
+  }, []);
+
   const gradientBorderStyle = {
     background: 'conic-gradient(from 270deg at 50% 50.12%, #4285F4 142.87deg, #BB55A1 175.78deg, #EA4335 194.23deg, #FBBC04 246.99deg, #B9D84C 268.68deg, #38A852 305.11deg, #38A852 330.36deg, #4285F4 353.77deg)'
   };
@@ -120,6 +130,20 @@ const TopHeader: React.FC<TopHeaderProps> = ({
               {historyCount}
             </span>
           )}
+        </button>
+
+        {/* Background Music Toggle Button */}
+        <button
+          onClick={() => bgmService.toggleMute()}
+          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 text-[12px] md:text-[14px] ${
+            !isMusicMuted
+              ? 'bg-[#4285F4]/30 border-[#4285F4] text-white animate-pulse'
+              : 'bg-[#18191C]/90 hover:bg-white text-white hover:text-black border-white/20'
+          }`}
+          title={isMusicMuted ? "Unmute Background Music" : "Mute Background Music"}
+          aria-label="Toggle Background Music"
+        >
+          {isMusicMuted ? '🔇' : '🎵'}
         </button>
 
         {/* Info Button */}

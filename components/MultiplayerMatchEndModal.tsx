@@ -41,12 +41,12 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-xl flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-xl flex items-center justify-center z-[120] p-4 animate-in fade-in duration-200">
       <div
         className="p-[1.5px] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl"
         style={gradientBorderStyle}
       >
-        <div className="bg-[#121318] text-white rounded-3xl p-6 md:p-7 flex flex-col items-center text-center">
+        <div className="bg-[#121318] text-white rounded-3xl p-6 md:p-7 flex flex-col items-center text-center max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
           {/* Header Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[12px] font-bold uppercase tracking-wider mb-3">
             <span>⏰</span> Sudden Death Timeout

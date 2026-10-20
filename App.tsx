@@ -767,6 +767,8 @@ const App: React.FC = () => {
             setMultiplayerModalTab('create');
             setIsMultiplayerOpen(true);
           }}
+          onOpenHistory={() => setIsHistoryOpen(true)}
+          historyCount={history.length}
         />
       )}
 

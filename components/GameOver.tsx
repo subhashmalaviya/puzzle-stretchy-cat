@@ -33,7 +33,7 @@ const GameOver: React.FC<GameOverProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 backdrop-blur-xl p-6 animate-in fade-in duration-200">
-      <div className="bg-black text-white px-7 lg:px-10 py-8 lg:py-10 rounded-3xl text-center w-full rainbow-border animate-rotate-gradient flex flex-col items-center min-w-xs max-w-md shadow-2xl">
+      <div className="bg-black text-white px-7 lg:px-10 py-8 lg:py-10 rounded-3xl text-center w-full rainbow-border animate-rotate-gradient flex flex-col items-center min-w-xs max-w-md shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
         
         <h2 className="text-white text-[24px] md:text-[30px] font-bold leading-tight tracking-tight px-4">
           {isWin 

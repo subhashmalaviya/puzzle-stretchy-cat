@@ -139,7 +139,7 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
         className="p-[1.5px] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
         style={gradientBorderStyle}
       >
-        <div className="bg-[#121316] text-white rounded-3xl p-5 md:p-6 flex flex-col max-h-[88vh]">
+        <div className="bg-[#121316] text-white rounded-3xl p-5 md:p-6 flex flex-col max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <div className="flex items-center gap-2.5">
@@ -266,7 +266,7 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                   </div>
 
                   {/* Player readiness list */}
-                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[220px]">
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[220px] custom-scrollbar overscroll-contain">
                     {players.map((p) => {
                       const isPlayerHost = room.hostId === p.id;
                       const isMe = profile.id === p.id;
@@ -396,7 +396,7 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                   )}
 
                   {/* Leaderboard Player List */}
-                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[220px]">
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[220px] custom-scrollbar overscroll-contain">
                     {players.map((p, idx) => {
                       const isMe = p.id === profile.id;
                       const isTimedOut = p.status === 'timeout';

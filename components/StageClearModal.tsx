@@ -28,7 +28,7 @@ const StageClearModal: React.FC<StageClearModalProps> = ({
 }) => {
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 backdrop-blur-xl p-4 animate-in fade-in duration-300">
-      <div className="bg-[#0e0f12] text-white p-7 md:p-9 rounded-3xl text-center w-full max-w-md rainbow-border animate-rotate-gradient flex flex-col items-center shadow-2xl">
+      <div className="bg-[#0e0f12] text-white p-7 md:p-9 rounded-3xl text-center w-full max-w-md rainbow-border animate-rotate-gradient flex flex-col items-center shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
         <span className="text-5xl mb-2 animate-bounce">🌟</span>
 
         <h2 className="text-white text-[24px] md:text-[28px] font-bold leading-tight">

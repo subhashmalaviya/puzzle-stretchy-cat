@@ -75,12 +75,12 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[120] backdrop-blur-md p-3 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-200">
       <div 
-        className="p-[1.5px] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
+        className="p-[1.5px] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-auto"
         style={gradientBorderStyle}
       >
-        <div className="bg-[#121316] text-white rounded-3xl p-5 md:p-6 flex flex-col max-h-[85vh]">
+        <div className="bg-[#121316] text-white rounded-3xl p-5 md:p-6 flex flex-col max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/10">
             <div className="flex items-center gap-2.5">
@@ -149,7 +149,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
           </div>
 
           {/* History List */}
-          <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 min-h-[160px] max-h-[360px]">
+          <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 min-h-[160px] max-h-[50vh] overscroll-contain custom-scrollbar">
             {history.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center py-10 text-center text-white/50">
                 <span className="text-4xl mb-2 opacity-60">🐱</span>
