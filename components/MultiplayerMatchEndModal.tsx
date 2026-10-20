@@ -25,15 +25,9 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
 
   const isHost = room.hostId === currentPlayerId;
   const players = Object.values(room.players).sort((a, b) => {
-    // 1st priority: players who survived (did not time out)
-    const aTimedOut = a.status === 'timeout';
-    const bTimedOut = b.status === 'timeout';
-    if (!aTimedOut && bTimedOut) return -1;
-    if (aTimedOut && !bTimedOut) return 1;
-
-    // 2nd priority: score
+    // Winner strictly determined according to their score
     if (b.score !== a.score) return b.score - a.score;
-    // 3rd priority: stage
+    // Tie-breakers: stage, then level
     if (b.stage !== a.stage) return b.stage - a.stage;
     return b.level - a.level;
   });
@@ -57,7 +51,7 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
         <div className="bg-[#121318] text-white rounded-3xl p-6 md:p-7 flex flex-col items-center text-center max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
           {/* Header Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[12px] font-bold uppercase tracking-wider mb-3">
-            <span>👑</span> Final Survivor Match Complete
+            <span>👑</span> Match Complete • Final Scores
           </div>
 
           <h2 className="text-[26px] md:text-[30px] font-black text-white leading-tight">
@@ -67,14 +61,14 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
           <p className="text-white/70 text-[14px] mt-1.5">
             {isMeWinner ? (
               <span className="text-emerald-400 font-semibold">
-                🎉 Victory! You are the last cat standing!
+                🎉 Victory! You won the battle with {winner.score.toLocaleString()} points!
               </span>
             ) : winner ? (
               <span>
-                <strong className="text-white font-bold">{winner.name}</strong> won the battle as the last cat standing!
+                <strong className="text-white font-bold">{winner.name}</strong> won the battle with <strong className="text-amber-400">{winner.score.toLocaleString()} points</strong>!
               </span>
             ) : (
-              <span>All players ran out of time! Match completed.</span>
+              <span>Match completed!</span>
             )}
           </p>
 
@@ -94,7 +88,7 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-amber-400 text-[12px] font-extrabold uppercase tracking-wide">
-                    {isMeWinner ? '🎉 Victory! You Won!' : 'Match Winner'}
+                    {isMeWinner ? '🎉 Victory! Highest Score!' : 'Match Winner • Highest Score'}
                   </span>
                 </div>
                 <div className="font-black text-white text-[17px] truncate">

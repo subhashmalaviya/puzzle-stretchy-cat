@@ -865,9 +865,10 @@ class MultiplayerService {
   }
 
   /**
-   * Checks if only one player is left with time remaining.
-   * When all other players have timed out and only 1 player remains with time,
-   * the match ends and that player (or top score) wins!
+   * Checks if all players have completed their time.
+   * Match continues while any player still has time remaining.
+   * When ALL players have timed out (all have time complete), the match ends
+   * and the winner is determined according to their score!
    */
   public checkSurvivorCondition(roomToInspect?: RoomState) {
     const room = roomToInspect || this.room;
@@ -875,17 +876,21 @@ class MultiplayerService {
     if (room.status !== 'playing' && room.status !== 'countdown') return;
 
     const allPlayers = Object.values(room.players);
-    if (allPlayers.length < 2) return;
+    if (allPlayers.length === 0) return;
 
-    // Alive players who have not timed out
-    const alivePlayers = allPlayers.filter(p => p.status !== 'timeout');
+    // Active players who still have time (have not timed out)
+    const activePlayers = allPlayers.filter(p => p.status !== 'timeout');
 
-    // End match when only one player is left with time (or all timed out)
-    if (alivePlayers.length <= 1) {
-      const winner = alivePlayers.length === 1 
-        ? alivePlayers[0] 
-        : allPlayers.sort((a, b) => b.score - a.score)[0];
-      const winnerName = winner ? winner.name : 'Final Survivor';
+    // End match ONLY when ALL players have completed their time!
+    if (activePlayers.length === 0) {
+      // Winner determined strictly according to their score
+      const sortedByScore = [...allPlayers].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.stage !== a.stage) return b.stage - a.stage;
+        return b.level - a.level;
+      });
+      const winner = sortedByScore[0];
+      const winnerName = winner ? `${winner.name} (${winner.score.toLocaleString()} pts)` : 'Top Scorer';
       this.endMatch(winnerName);
     }
   }

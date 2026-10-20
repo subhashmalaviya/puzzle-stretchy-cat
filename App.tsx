@@ -800,15 +800,23 @@ const App: React.FC = () => {
           />
           {timeLeft !== null && (
             <div className={`shrink-0 flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-bold mt-2 sm:mt-2.5 shadow-lg transition-colors duration-300 z-10 ${
-              timeLeft <= 5 && timerStarted ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-black'
+              timeLeft === 0
+                ? 'bg-red-600 text-white animate-pulse'
+                : timeLeft <= 5 && timerStarted
+                ? 'bg-red-500 text-white animate-pulse'
+                : 'bg-white text-black'
             }`}>
               <TimerIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="text-[13px] sm:text-[15px] tabular-nums">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-              {!timerStarted && (
+              {multiplayerRoom && timeLeft === 0 ? (
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold bg-black/30 px-1.5 py-0.5 rounded-full ml-1 text-white">
+                  Time's Up • Waiting for players...
+                </span>
+              ) : !timerStarted && timeLeft > 0 ? (
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold bg-black/10 px-1.5 py-0.5 rounded-full ml-1">
                   Ready
                 </span>
-              )}
+              ) : null}
             </div>
           )}
         </div>
