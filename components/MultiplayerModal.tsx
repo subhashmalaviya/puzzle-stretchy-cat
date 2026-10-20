@@ -96,6 +96,10 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   };
 
   const handleStartMatch = async () => {
+    if (!canStartMatch) {
+      setErrorMsg('All friends must be in the room and clicked Ready Up first!');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await multiplayerService.startMatch();
@@ -130,7 +134,10 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
 
   const isHost = room ? room.hostId === profile.id : false;
   const isMeReady = room?.players[profile.id]?.isReady ?? false;
-  const allMembersReady = players.length > 0 && players.every(p => p.isReady);
+  const otherPlayers = players.filter(p => p.id !== room?.hostId);
+  const hasFriends = otherPlayers.length >= 1;
+  const allFriendsReady = hasFriends && otherPlayers.every(p => p.isReady);
+  const canStartMatch = hasFriends && allFriendsReady;
   const isLobbyWaiting = room?.status === 'waiting';
 
   return (
@@ -329,14 +336,20 @@ const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                     {isHost ? (
                       <button
                         onClick={handleStartMatch}
-                        disabled={isSubmitting}
-                        className={`flex-1 py-3 text-black font-extrabold text-[15px] rounded-full transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
-                          allMembersReady
-                            ? 'bg-emerald-400 hover:bg-emerald-300 animate-pulse'
-                            : 'bg-white hover:bg-white/90'
+                        disabled={isSubmitting || !canStartMatch}
+                        className={`flex-1 py-3 font-extrabold text-[14px] md:text-[15px] rounded-full transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 ${
+                          canStartMatch
+                            ? 'bg-emerald-400 hover:bg-emerald-300 text-black animate-pulse cursor-pointer'
+                            : 'bg-white/10 text-white/40 cursor-not-allowed border border-white/10'
                         }`}
                       >
-                        {allMembersReady ? 'Start Battle Now! 🚀' : 'Start Battle 🚀'}
+                        {isSubmitting
+                          ? 'Starting Match...'
+                          : !hasFriends
+                            ? 'Waiting for friends to join... ⏳'
+                            : !allFriendsReady
+                              ? 'Waiting for friends to ready up... ⏳'
+                              : 'Start Battle Now! 🚀'}
                       </button>
                     ) : (
                       <div className="flex-1 text-center text-[12px] text-white/60 font-medium py-2 bg-white/5 rounded-full border border-white/10">

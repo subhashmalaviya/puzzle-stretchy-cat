@@ -11,13 +11,18 @@ interface MatchCountdownOverlayProps {
 
 const MatchCountdownOverlay: React.FC<MatchCountdownOverlayProps> = ({ onComplete }) => {
   const [count, setCount] = useState<number | string>(3);
+  const onCompleteRef = React.useRef(onComplete);
 
-  useEffect(() => {
+  React.useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  React.useEffect(() => {
     const timer1 = setTimeout(() => setCount(2), 900);
     const timer2 = setTimeout(() => setCount(1), 1800);
     const timer3 = setTimeout(() => setCount('GO! 🏁'), 2700);
     const timerEnd = setTimeout(() => {
-      onComplete();
+      onCompleteRef.current();
     }, 3500);
 
     return () => {
@@ -26,7 +31,7 @@ const MatchCountdownOverlay: React.FC<MatchCountdownOverlayProps> = ({ onComplet
       clearTimeout(timer3);
       clearTimeout(timerEnd);
     };
-  }, [onComplete]);
+  }, []); // Empty array ensures countdown runs strictly once and cannot loop
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-xl animate-in fade-in duration-200">

@@ -165,8 +165,8 @@ class MultiplayerService {
     if (!msg || !this.room) return;
     const { type, room, player, playerId, updates, endedBy, toast, senderId } = msg;
 
-    // Ignore messages sent by ourselves (except when explicit)
-    if (senderId === this.profile.id && type !== 'ROOM_STATE') {
+    // Ignore all messages sent by ourselves! We already applied our actions locally.
+    if (senderId === this.profile.id) {
       return;
     }
 
@@ -268,6 +268,7 @@ class MultiplayerService {
             }
           };
           this.applyRoomUpdate(updatedRoom);
+          this.checkSurvivorCondition(updatedRoom);
         }
         break;
 
@@ -295,6 +296,7 @@ class MultiplayerService {
           }
           const updatedRoom = { ...this.room };
           this.applyRoomUpdate(updatedRoom);
+          this.checkSurvivorCondition(updatedRoom);
           this.emitToast({
             id: Date.now().toString(),
             message: `🏃 ${leavingName} left the room`,
@@ -416,10 +418,10 @@ class MultiplayerService {
       });
     });
 
-    // Host heartbeat every 3 seconds to keep room synced across all devices
+    // Host heartbeat every 3 seconds to keep room synced across all devices while in waiting lobby
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
     this.heartbeatInterval = setInterval(() => {
-      if (this.room && this.room.hostId === this.profile.id) {
+      if (this.room && this.room.hostId === this.profile.id && this.room.status === 'waiting') {
         this.publishNetworkMessage({
           type: 'ROOM_STATE',
           room: this.room,
@@ -571,6 +573,14 @@ class MultiplayerService {
 
   public async startMatch() {
     if (!this.room) return;
+    if (this.room.hostId !== this.profile.id) return;
+
+    const players = Object.values(this.room.players);
+    const otherPlayers = players.filter(p => p.id !== this.room!.hostId);
+    if (otherPlayers.length < 1 || !players.every(p => p.isReady)) {
+      console.warn("Cannot start match: all players must be in room and ready first");
+      return;
+    }
 
     const updatedRoom: RoomState = {
       ...this.room,
@@ -757,20 +767,103 @@ class MultiplayerService {
     };
   }
 
-  public async endMatch(endedBy?: string) {
+  /**
+   * Reports that this player's continuous clock ran out of time.
+   * If other players still have time left, match continues and this player is eliminated/spectating.
+   * When only one player remains with time left, the match ends and the survivor wins!
+   */
+  public reportTimeout(score: number, stage: number, level: number) {
     if (!this.room) return;
-    const name = endedBy || this.profile.name;
-    const me = this.room.players[this.profile.id];
-    const updatedPlayers = {
-      ...this.room.players,
-      ...(me ? {
-        [this.profile.id]: {
-          ...me,
-          status: 'timeout' as const,
-          lastActive: Date.now(),
-        }
-      } : {})
+
+    const updates = {
+      score,
+      stage,
+      level,
+      status: 'timeout' as const,
+      name: this.profile.name,
+      avatar: this.profile.avatar,
+      lastActive: Date.now(),
     };
+
+    const updatedRoom: RoomState = {
+      ...this.room,
+      players: {
+        ...this.room.players,
+        [this.profile.id]: {
+          ...(this.room.players[this.profile.id] || {
+            id: this.profile.id,
+            color: this.profile.color,
+            isReady: true,
+          }),
+          ...updates,
+        },
+      },
+    };
+
+    this.applyRoomUpdate(updatedRoom);
+
+    const toast: MultiplayerToastMsg = {
+      id: Date.now().toString(),
+      message: `💀 ${this.profile.name} ran out of time!`,
+      type: 'death',
+      timestamp: Date.now(),
+    };
+    this.emitToast(toast);
+    this.publishNetworkMessage({ type: 'TOAST', toast, senderId: this.profile.id });
+
+    this.publishNetworkMessage({
+      type: 'PLAYER_UPDATE',
+      playerId: this.profile.id,
+      updates,
+      senderId: this.profile.id,
+    });
+
+    try {
+      fetch('/api/rooms/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: this.room.id,
+          playerId: this.profile.id,
+          updates,
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    // Check if only one player is left with time remaining
+    this.checkSurvivorCondition(updatedRoom);
+  }
+
+  /**
+   * Checks if only one player is left with time remaining.
+   * When all other players have timed out and only 1 player remains with time,
+   * the match ends and that player (or top score) wins!
+   */
+  public checkSurvivorCondition(roomToInspect?: RoomState) {
+    const room = roomToInspect || this.room;
+    if (!room) return;
+    if (room.status !== 'playing' && room.status !== 'countdown') return;
+
+    const allPlayers = Object.values(room.players);
+    if (allPlayers.length < 2) return;
+
+    // Alive players who have not timed out
+    const alivePlayers = allPlayers.filter(p => p.status !== 'timeout');
+
+    // End match when only one player is left with time (or all timed out)
+    if (alivePlayers.length <= 1) {
+      const winner = alivePlayers.length === 1 
+        ? alivePlayers[0] 
+        : allPlayers.sort((a, b) => b.score - a.score)[0];
+      const winnerName = winner ? winner.name : 'Final Survivor';
+      this.endMatch(winnerName);
+    }
+  }
+
+  public async endMatch(endedBy?: string) {
+    if (!this.room || this.room.status === 'ended') return;
+    const name = endedBy || this.profile.name;
+    const updatedPlayers = { ...this.room.players };
 
     const updatedRoom: RoomState = {
       ...this.room,

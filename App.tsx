@@ -141,7 +141,10 @@ const App: React.FC = () => {
     const unsubMatchStart = multiplayerService.onMatchStart(() => {
       setIsMultiplayerOpen(false);
       setIsMatchEndedModalOpen(false);
-      setIsMatchCountdown(true);
+      setIsMatchCountdown((prev) => {
+        if (prev) return prev;
+        return true;
+      });
     });
     const unsubMatchEnd = multiplayerService.onMatchEnd((endedBy, room) => {
       setTimerStarted(false);
@@ -355,13 +358,14 @@ const App: React.FC = () => {
   };
 
   // Multiplayer Countdown Complete handler: starts continuous countdown clock!
-  const handleMatchCountdownComplete = () => {
+  const handleMatchCountdownComplete = useCallback(() => {
     setIsMatchCountdown(false);
     setIsSoloStarted(true);
     setTimerStarted(true);
     setLevelStartTime(Date.now());
     setTimeLeft(getStageInitialTime(1));
-  };
+    multiplayerService.updateProgress(0, 1, 1, 'playing');
+  }, []);
 
   // Host triggers Rematch: resets room and brings everyone back to lobby
   const handleRematch = () => {
@@ -426,20 +430,19 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [hasStarted, gameResult, timeLeft, timerStarted, isPaused]);
 
-  // When continuous time runs out, save score to history tab and trigger game over or end multiplayer match
+  // When continuous time runs out, save score to history tab and report timeout
   useEffect(() => {
     if (timeLeft === 0 && !gameState.isWon && hasStarted && !isTransitioning && !gameResult && timerStarted) {
       recordHistoryRun(gameState.score, stage, levelIndex, 'timeout');
+      setTimerStarted(false);
       if (multiplayerRoom) {
-        multiplayerService.endMatch(myProfile.name);
-        setTimerStarted(false);
-        setIsMatchEndedModalOpen(true);
+        multiplayerService.reportTimeout(gameState.score, stage, levelIndex);
       } else {
         multiplayerService.updateProgress(gameState.score, stage, levelIndex, 'timeout');
         setGameResult('lose');
       }
     }
-  }, [timeLeft, gameState.isWon, hasStarted, isTransitioning, gameResult, timerStarted, gameState.score, stage, levelIndex, recordHistoryRun, multiplayerRoom, myProfile.name]);
+  }, [timeLeft, gameState.isWon, hasStarted, isTransitioning, gameResult, timerStarted, gameState.score, stage, levelIndex, recordHistoryRun, multiplayerRoom]);
 
   useEffect(() => { 
     if (hasStarted) initLevel(stage, levelIndex); 
@@ -772,7 +775,56 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Multiplayer Sudden Death Match End Modal (Triggered when ANY player's timer hits zero) */}
+      {/* Eliminated Spectating Banner while other players are still competing */}
+      {multiplayerRoom && multiplayerRoom.status === 'playing' && multiplayerRoom.players[myProfile.id]?.status === 'timeout' && !isMatchEndedModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[95] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121318] border border-red-500/30 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl flex flex-col items-center">
+            <span className="text-4xl mb-2">⏰</span>
+            <div className="text-red-400 font-extrabold text-[18px]">Your Time Ran Out!</div>
+            <p className="text-white/70 text-[13px] mt-1 mb-4">
+              You are eliminated. Waiting for final survivor...
+            </p>
+            <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 mb-4 text-left">
+              <div className="text-[11px] font-bold uppercase text-white/50 tracking-wider mb-2">
+                Survivors Competing:
+              </div>
+              <div className="space-y-1.5 max-h-[140px] overflow-y-auto custom-scrollbar">
+                {Object.values(multiplayerRoom.players)
+                  .filter(p => p.status !== 'timeout')
+                  .map(p => (
+                    <div key={p.id} className="flex items-center justify-between text-xs text-white">
+                      <span className="flex items-center gap-1.5">
+                        <span>{p.avatar}</span>
+                        <span className="font-semibold">{p.name}</span>
+                      </span>
+                      <span className="font-bold text-amber-400">{p.score.toLocaleString()} pts</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full">
+              <button
+                onClick={() => {
+                  multiplayerService.leaveRoom();
+                  setMultiplayerRoom(null);
+                  handleFullReset();
+                }}
+                className="flex-1 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold text-xs rounded-full transition-all active:scale-95 cursor-pointer"
+              >
+                Leave Room
+              </button>
+              <button
+                onClick={() => setIsMultiplayerOpen(true)}
+                className="flex-1 py-2.5 bg-white text-black font-bold text-xs rounded-full transition-all hover:bg-white/90 active:scale-95 shadow-md cursor-pointer"
+              >
+                Leaderboard ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Multiplayer Final Survivor Match End Modal */}
       <MultiplayerMatchEndModal
         isOpen={isMatchEndedModalOpen}
         room={multiplayerRoom}

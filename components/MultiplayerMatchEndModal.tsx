@@ -25,7 +25,15 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
 
   const isHost = room.hostId === currentPlayerId;
   const players = Object.values(room.players).sort((a, b) => {
+    // 1st priority: players who survived (did not time out)
+    const aTimedOut = a.status === 'timeout';
+    const bTimedOut = b.status === 'timeout';
+    if (!aTimedOut && bTimedOut) return -1;
+    if (aTimedOut && !bTimedOut) return 1;
+
+    // 2nd priority: score
     if (b.score !== a.score) return b.score - a.score;
+    // 3rd priority: stage
     if (b.stage !== a.stage) return b.stage - a.stage;
     return b.level - a.level;
   });
@@ -34,7 +42,7 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
   const isMeWinner = winner?.id === currentPlayerId;
   const endedByText = room.endedBy || 'A player';
   const me = room.players[currentPlayerId];
-  const didITimeout = me?.status === 'timeout' || endedByText.toLowerCase() === me?.name.toLowerCase();
+  const didITimeout = me?.status === 'timeout';
 
   const gradientBorderStyle = {
     background: 'conic-gradient(from 270deg at 50% 50.12%, #4285F4 142.87deg, #BB55A1 175.78deg, #EA4335 194.23deg, #FBBC04 246.99deg, #B9D84C 268.68deg, #38A852 305.11deg, #38A852 330.36deg, #4285F4 353.77deg)',
@@ -48,8 +56,8 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
       >
         <div className="bg-[#121318] text-white rounded-3xl p-6 md:p-7 flex flex-col items-center text-center max-h-[90vh] overflow-y-auto overscroll-contain custom-scrollbar">
           {/* Header Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[12px] font-bold uppercase tracking-wider mb-3">
-            <span>⏰</span> Sudden Death Timeout
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[12px] font-bold uppercase tracking-wider mb-3">
+            <span>👑</span> Final Survivor Match Complete
           </div>
 
           <h2 className="text-[26px] md:text-[30px] font-black text-white leading-tight">
@@ -57,12 +65,16 @@ const MultiplayerMatchEndModal: React.FC<MultiplayerMatchEndModalProps> = ({
           </h2>
 
           <p className="text-white/70 text-[14px] mt-1.5">
-            {didITimeout ? (
-              <span className="text-red-400 font-semibold">Your timer hit 0:00! Game over for the room.</span>
-            ) : (
-              <span>
-                <strong className="text-white font-bold">{endedByText}</strong> ran out of time! Game ended.
+            {isMeWinner ? (
+              <span className="text-emerald-400 font-semibold">
+                🎉 Victory! You are the last cat standing!
               </span>
+            ) : winner ? (
+              <span>
+                <strong className="text-white font-bold">{winner.name}</strong> won the battle as the last cat standing!
+              </span>
+            ) : (
+              <span>All players ran out of time! Match completed.</span>
             )}
           </p>
 
