@@ -50,46 +50,58 @@ const InfoDialog: React.FC<{
   }, [dismissInfoDialog]);
 
   return (
-
     <dialog
       ref={dialogRef}
-      className="mt-auto ml-auto mr-auto md:mr-[58px] mb-[119px] p-0 border-none rounded-2xl bg-transparent aspect-square backdrop:bg-black/40 focus:outline-none h-[400px] md:h-[435px] h-[400px] md:w-[435px]"
+      className="m-auto p-0 border-none rounded-3xl bg-white shadow-2xl backdrop:bg-black/60 focus:outline-none w-[92vw] max-w-[380px] sm:max-w-[420px] max-h-[85vh] overflow-y-auto overscroll-contain"
     >
-      <div className="flex h-full w-full flex-col overflow-hidden relative">
+      <div className="flex w-full flex-col overflow-hidden relative pt-14 sm:pt-16 pb-6 px-5 sm:px-7">
+        {/* Top Decorative Arc Icon */}
         <img
           src={getPath('/images/builds/info-icon.png')}
-          className="w-[188px] h-[188px] absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 select-none"
+          className="w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none"
           alt="Information Icon"
         />
-        <img
-          src={getPath('/images/builds/info-icon.png')}
-          className="w-[188px] h-[188px] absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 select-none"
-          alt="Information Icon"
-        />
-        <button aria-label="dismiss dialog" onClick={() => dismissInfoDialog()} className="absolute top-4 right-4 w-[44px] h-[44] text-black flex flex-col justify-center items-center">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+        {/* Close Button */}
+        <button 
+          aria-label="dismiss dialog" 
+          onClick={() => dismissInfoDialog()} 
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 active:scale-95 text-neutral-700 hover:text-black flex items-center justify-center transition-all cursor-pointer z-20"
+        >
+          <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M6.0294 18L5 16.9706L10.4706 11.5L5 6.0294L6.0294 5L11.5 10.4706L16.9706 5L18 6.0294L12.5294 11.5L18 16.9706L16.9706 18L11.5 12.5294L6.0294 18Z"
               fill="currentColor"
             />
           </svg>
         </button>
-        <div className="flex bg-white flex-col items-center text-balance flex-1 justify-center p-[26px] py-[110px]">
-          <p className="inline-flex font-bold tracking-[-0.36px] text-[18px] text-black mb-2">
+
+        {/* Content with responsive typography and spacing */}
+        <div className="flex flex-col items-center text-center mt-2">
+          <h3 className="font-extrabold text-[18px] sm:text-[20px] text-neutral-900 tracking-tight mb-2">
             {title}
-          </p>
-          <p className="inline-flex text-black font-medium text-center max-w-[875px] text-[18px] leading-[1.6] tracking-[-0.36px]">
+          </h3>
+          <p className="text-neutral-700 font-medium text-[13px] sm:text-[14px] md:text-[15px] leading-relaxed max-w-sm">
             {goal}
           </p>
           {goalNote && (
-            <p className="inline-flex font-medium tracking-[-0.4px] text-[16px] lg:text-[18px] text-[#9BA0A6] mt-4">
+            <p className="font-medium text-[12px] sm:text-[13px] text-neutral-500 mt-3 pt-2.5 border-t border-neutral-200 w-full text-center">
               {goalNote}
             </p>
           )}
+
+          {/* Quick Got It button */}
+          <button
+            type="button"
+            onClick={() => dismissInfoDialog()}
+            className="mt-4 w-full py-2.5 px-4 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-[13px] sm:text-[14px] transition-all active:scale-95 shadow-md cursor-pointer"
+          >
+            Got It!
+          </button>
         </div>
       </div>
     </dialog>
-    )
+  );
 }
 
 export default InfoDialog;
