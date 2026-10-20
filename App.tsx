@@ -859,6 +859,7 @@ const App: React.FC = () => {
             setIsMultiplayerOpen(true);
           }}
           onOpenHistory={() => setIsHistoryOpen(true)}
+          onOpenInfo={() => setIsInfoOpen(true)}
           historyCount={history.length}
         />
       )}

@@ -16,6 +16,7 @@ interface SoloStartOverlayProps {
   onStart: () => void;
   onOpenMultiplayer: () => void;
   onOpenHistory: () => void;
+  onOpenInfo?: () => void;
 }
 
 const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
@@ -28,6 +29,7 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
   onStart,
   onOpenMultiplayer,
   onOpenHistory,
+  onOpenInfo,
 }) => {
   // Background Music state
   const [isMusicMuted, setIsMusicMuted] = useState(bgmService.isMuted());
@@ -87,16 +89,30 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
         {/* Card Body with Mobile Scroll Container */}
         <div className="bg-[#101115] text-white rounded-3xl p-5 sm:p-6 md:p-7 flex flex-col items-center text-center max-h-[92vh] overflow-y-auto overscroll-contain custom-scrollbar relative z-20">
           
-          {/* Top Bar: Stage Tag + BGM Toggle */}
-          <div className="w-full flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/10 text-white/70 border border-white/10">
+          {/* Top Bar: Stage Tag + Help Button + BGM Toggle */}
+          <div className="w-full flex items-center justify-between mb-2 gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/10 text-white/80 border border-white/10 shrink-0">
               Stage {stage}
             </span>
+
+            {/* Help Button in the middle */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenInfo?.();
+              }}
+              className="px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-amber-400/50 transition-all duration-200 active:scale-95 shadow-md cursor-pointer shrink-0"
+              title="How to play / Help"
+            >
+              <span className="w-4 h-4 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] flex items-center justify-center font-black">?</span>
+              <span>Help</span>
+            </button>
 
             <button
               type="button"
               onClick={handleToggleMusic}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all duration-200 active:scale-95 shadow-md cursor-pointer border ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all duration-200 active:scale-95 shadow-md cursor-pointer border shrink-0 ${
                 !isMusicMuted 
                   ? 'bg-[#4285F4]/20 border-[#4285F4]/50 text-white shadow-blue-500/20' 
                   : 'bg-white/5 border-white/15 text-white/50 hover:text-white'

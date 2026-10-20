@@ -53,7 +53,7 @@ const TopHeader: React.FC<TopHeaderProps> = ({
   return (
     <header className="fixed top-2 md:top-3.5 left-0 right-0 z-30 flex items-center justify-between px-2 sm:px-4 md:px-6 pointer-events-none gap-1 sm:gap-2">
       {/* Left: Stage info badge */}
-      <div className="flex-1 flex items-center justify-start min-w-0 pointer-events-auto">
+      <div className="shrink-0 md:flex-1 flex items-center justify-start pointer-events-auto">
         <div 
           className="p-[1.2px] rounded-full overflow-hidden shadow-lg shrink-0"
           style={gradientBorderStyle}
@@ -67,8 +67,8 @@ const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
       </div>
 
-      {/* Center: Best Score on top (in normal flex flow with shrink-0, centered between flex-1 sides) */}
-      <div className="shrink-0 flex items-center justify-center pointer-events-auto px-0.5 sm:px-1">
+      {/* Center/Shifted Left on Mobile: Best Score badge (shifted left next to Stage info on mobile, centered on desktop) */}
+      <div className="shrink-0 flex items-center pointer-events-auto ml-1 sm:ml-2 md:ml-0 md:absolute md:left-1/2 md:-translate-x-1/2 px-0.5 sm:px-1">
         <div 
           className="p-[1.2px] md:p-[1.5px] rounded-full overflow-hidden shadow-xl"
           style={gradientBorderStyle}
