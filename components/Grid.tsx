@@ -42,14 +42,17 @@ const Grid: React.FC<GridProps> = ({
   const { tileSize, gap } = useMemo(() => {
     const maxDim = Math.max(level.width, level.height);
     
-    // Width limit: 92% of screen width, max 500px for desktop
-    const horizontalLimit = Math.min(windowSize.width * 0.92 - 16, 500);
+    // Width limit: 92% of screen width, max 480px for desktop
+    const horizontalLimit = Math.min(windowSize.width * 0.92 - 16, 480);
     
-    // Height limit: dynamically reserve space for top bar, timer, and footer
-    const reservedVertical = windowSize.height < 650 ? 175 : windowSize.height < 800 ? 210 : 250;
-    const verticalLimit = Math.max(windowSize.height - reservedVertical, 220);
+    // Height limit: dynamically reserve space for top bar (50-60px), timer (45px), footer (60-70px), and margins (60px)
+    const reservedVertical = windowSize.height < 650 ? 220 : windowSize.height < 800 ? 245 : 275;
+    const verticalLimit = Math.max(windowSize.height - reservedVertical, 180);
     
-    const containerSize = Math.min(horizontalLimit, verticalLimit);
+    // Maximum grid dimension capped to prevent pushing timer out on low-height laptop screens
+    const maxContainer = windowSize.height < 650 ? 340 : windowSize.height < 800 ? 390 : 450;
+    const containerSize = Math.min(horizontalLimit, verticalLimit, maxContainer);
+    
     const calculatedTileSize = Math.floor(containerSize / maxDim);
     const calculatedGap = Math.max(2, Math.floor(calculatedTileSize / 11));
 

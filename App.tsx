@@ -716,8 +716,8 @@ const App: React.FC = () => {
       />
 
       {/* Main Grid View */}
-      <main className="absolute top-[46px] sm:top-[54px] md:top-[64px] bottom-[64px] sm:bottom-[76px] md:bottom-[96px] left-0 right-0 flex flex-col items-center justify-center p-2 select-none overflow-hidden">
-        <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} flex flex-col items-center`}>
+      <main className="absolute top-[46px] sm:top-[52px] md:top-[58px] bottom-[56px] sm:bottom-[66px] md:bottom-[76px] left-0 right-0 flex flex-col items-center justify-center p-2 select-none">
+        <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} flex flex-col items-center justify-center`}>
           <Grid
             level={level}
             path={gameState.path}
@@ -739,13 +739,13 @@ const App: React.FC = () => {
             }}
           />
           {timeLeft !== null && (
-            <div className={`flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-bold mt-2 shadow-lg transition-colors duration-300 ${
+            <div className={`shrink-0 flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-bold mt-2 sm:mt-2.5 shadow-lg transition-colors duration-300 z-10 ${
               timeLeft <= 5 && timerStarted ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-black'
             }`}>
               <TimerIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="text-[14px] sm:text-[16px] tabular-nums">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+              <span className="text-[13px] sm:text-[15px] tabular-nums">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
               {!timerStarted && (
-                <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-extrabold bg-black/10 px-1.5 py-0.5 rounded-full ml-1">
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold bg-black/10 px-1.5 py-0.5 rounded-full ml-1">
                   Ready
                 </span>
               )}
