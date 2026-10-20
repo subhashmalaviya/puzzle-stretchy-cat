@@ -94,10 +94,10 @@ const TopHeader: React.FC<TopHeaderProps> = ({
 
       {/* Right: Multiplayer, History & Info buttons */}
       <div className="flex-1 flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 pointer-events-auto min-w-0">
-        {/* Multiplayer Button */}
+        {/* Multiplayer Button - In multiplayer room, on mobile (<md), the Room HUD is already active and visible, so hide the duplicate blue pill on mobile */}
         <button
           onClick={onOpenMultiplayer}
-          className={`flex items-center gap-1 rounded-full px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 transition-all duration-200 shadow-lg active:scale-95 border shrink-0 ${
+          className={`${currentRoomId ? 'hidden md:flex' : 'flex'} items-center gap-1 rounded-full px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 transition-all duration-200 shadow-lg active:scale-95 border shrink-0 ${
             currentRoomId
               ? 'bg-[#4285F4] hover:bg-[#3367D6] text-white border-blue-400'
               : 'bg-[#18191C]/90 hover:bg-white text-white hover:text-black border-white/20'

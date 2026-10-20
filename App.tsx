@@ -717,7 +717,7 @@ const App: React.FC = () => {
 
       {/* Main Grid View */}
       <main className="absolute top-[46px] sm:top-[52px] md:top-[58px] bottom-[56px] sm:bottom-[66px] md:bottom-[76px] left-0 right-0 flex flex-col items-center justify-center p-2 select-none">
-        <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} flex flex-col items-center justify-center`}>
+        <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} flex flex-col items-center justify-center mt-7 sm:mt-0`}>
           <Grid
             level={level}
             path={gameState.path}
