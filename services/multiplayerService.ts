@@ -249,7 +249,18 @@ class MultiplayerService {
 
       case 'START_MATCH':
         if (room && room.id === this.room.id) {
-          this.applyRoomUpdate(room);
+          // Explicitly zero out all players' scores, stage, and level upon match start/restart
+          const resetRoom: RoomState = {
+            ...room,
+            status: 'countdown',
+            players: Object.fromEntries(
+              Object.entries(room.players).map(([id, p]) => [
+                id,
+                { ...p, status: 'playing', score: 0, stage: 1, level: 1 }
+              ])
+            )
+          };
+          this.applyRoomUpdate(resetRoom);
           this.notifyMatchStart();
         }
         break;
@@ -281,8 +292,27 @@ class MultiplayerService {
 
       case 'REMATCH':
         if (room && room.id === this.room.id) {
-          this.applyRoomUpdate(room);
-          this.notifyRematch(room);
+          // Explicitly zero out all players' scores upon rematch
+          const resetRoom: RoomState = {
+            ...room,
+            status: 'waiting',
+            endedBy: undefined,
+            players: Object.fromEntries(
+              Object.entries(room.players).map(([id, p]) => [
+                id,
+                {
+                  ...p,
+                  score: 0,
+                  stage: 1,
+                  level: 1,
+                  isReady: p.id === room.hostId,
+                  status: p.id === room.hostId ? 'ready' : 'waiting'
+                }
+              ])
+            )
+          };
+          this.applyRoomUpdate(resetRoom);
+          this.notifyRematch(resetRoom);
         }
         break;
 

@@ -157,6 +157,23 @@ const App: React.FC = () => {
     const unsubMatchStart = multiplayerService.onMatchStart(() => {
       setIsMultiplayerOpen(false);
       setIsMatchEndedModalOpen(false);
+      setGameResult(null);
+      setStage(1);
+      setLevelIndex(1);
+      setTimeLeft(getStageInitialTime(1));
+      setTimeBonuses([]);
+      collectedMap.current.clear();
+      isWinProcessed.current = false;
+      setGameState({
+        path: [],
+        isWon: false,
+        isDragging: false,
+        score: 0,
+        levelStartScore: 0,
+        multiplier: 1,
+        treats: 0,
+        collectedItems: []
+      });
       setIsMatchCountdown((prev) => {
         if (prev) return prev;
         return true;
@@ -176,6 +193,19 @@ const App: React.FC = () => {
       setGameResult(null);
       setStage(1);
       setLevelIndex(1);
+      setTimeBonuses([]);
+      collectedMap.current.clear();
+      isWinProcessed.current = false;
+      setGameState({
+        path: [],
+        isWon: false,
+        isDragging: false,
+        score: 0,
+        levelStartScore: 0,
+        multiplier: 1,
+        treats: 0,
+        collectedItems: []
+      });
       setMultiplayerRoom(room);
       setIsMultiplayerOpen(true);
     });
@@ -384,8 +414,24 @@ const App: React.FC = () => {
     setTimerStarted(true);
     setLevelStartTime(Date.now());
     setTimeLeft(getStageInitialTime(1));
+    setStage(1);
+    setLevelIndex(1);
+    setTimeBonuses([]);
+    collectedMap.current.clear();
+    isWinProcessed.current = false;
+    setGameState({
+      path: [],
+      isWon: false,
+      isDragging: false,
+      score: 0,
+      levelStartScore: 0,
+      multiplier: 1,
+      treats: 0,
+      collectedItems: []
+    });
+    initLevel(1, 1);
     multiplayerService.updateProgress(0, 1, 1, 'playing');
-  }, []);
+  }, [initLevel]);
 
   // Host triggers Rematch: resets room and brings everyone back to lobby
   const handleRematch = () => {
@@ -397,6 +443,20 @@ const App: React.FC = () => {
     setGameResult(null);
     setStage(1);
     setLevelIndex(1);
+    setTimeBonuses([]);
+    collectedMap.current.clear();
+    isWinProcessed.current = false;
+    setGameState({
+      path: [],
+      isWon: false,
+      isDragging: false,
+      score: 0,
+      levelStartScore: 0,
+      multiplier: 1,
+      treats: 0,
+      collectedItems: []
+    });
+    initLevel(1, 1);
     setIsMultiplayerOpen(true);
   };
 
