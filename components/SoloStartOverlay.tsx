@@ -29,11 +29,6 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
   onOpenMultiplayer,
   onOpenHistory,
 }) => {
-  // 3D Card Tilt state
-  const [tilt, setTilt] = useState({ x: 0, y: 0, glareX: 50, glareY: 50 });
-  const [isHovered, setIsHovered] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-
   // Background Music state
   const [isMusicMuted, setIsMusicMuted] = useState(bgmService.isMuted());
 
@@ -50,7 +45,8 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
   };
 
   const handleStartWithMusic = () => {
-    // Unmute & start BGM on user start gesture
+    // Unmute & start BGM on start
+    bgmService.unmute();
     bgmService.play();
     onStart();
   };
@@ -67,28 +63,6 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onStart]);
 
-  // Mouse 3D perspective calculation
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    const rotX = ((y - centerY) / centerY) * -12; // tilt up/down
-    const rotY = ((x - centerX) / centerX) * 12;  // tilt left/right
-    const glareX = (x / rect.width) * 100;
-    const glareY = (y / rect.height) * 100;
-
-    setTilt({ x: rotX, y: rotY, glareX, glareY });
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    setTilt({ x: 0, y: 0, glareX: 50, glareY: 50 });
-  };
-
   const gradientBorderStyle = {
     background: 'conic-gradient(from 270deg at 50% 50.12%, #4285F4 142.87deg, #BB55A1 175.78deg, #EA4335 194.23deg, #FBBC04 246.99deg, #B9D84C 268.68deg, #38A852 305.11deg, #38A852 330.36deg, #4285F4 353.77deg)'
   };
@@ -97,38 +71,19 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
     <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[100] p-3 sm:p-4 overflow-y-auto overscroll-contain">
       {/* 3D Background Floating Elements for Atmospheric Depth */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-        <div className="absolute top-[10%] left-[8%] w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-400/20 backdrop-blur-md animate-float-3d" style={{ transform: 'rotate(15deg) translateZ(-50px)' }} />
-        <div className="absolute bottom-[14%] right-[10%] w-20 h-20 rounded-2xl bg-purple-500/10 border border-purple-400/20 backdrop-blur-md animate-float-3d" style={{ animationDelay: '1.2s', transform: 'rotate(-20deg) translateZ(-80px)' }} />
+        <div className="absolute top-[10%] left-[8%] w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-400/20 backdrop-blur-md animate-float-3d" style={{ transform: 'rotate(15deg)' }} />
+        <div className="absolute bottom-[14%] right-[10%] w-20 h-20 rounded-2xl bg-purple-500/10 border border-purple-400/20 backdrop-blur-md animate-float-3d" style={{ animationDelay: '1.2s', transform: 'rotate(-20deg)' }} />
         <div className="absolute top-[20%] right-[15%] text-2xl opacity-40 animate-pulse-glow">🐟</div>
         <div className="absolute bottom-[22%] left-[12%] text-2xl opacity-40 animate-pulse-glow" style={{ animationDelay: '1.8s' }}>🧶</div>
         <div className="absolute top-[45%] left-[5%] text-xl opacity-30 animate-star-twinkle">✨</div>
         <div className="absolute top-[60%] right-[8%] text-xl opacity-30 animate-star-twinkle" style={{ animationDelay: '1s' }}>⭐</div>
       </div>
 
-      {/* 3D Perspective Wrapper */}
+      {/* Card Wrapper without hover tilt */}
       <div 
-        ref={cardRef}
-        onMouseMove={(e) => { setIsHovered(true); handleMouseMove(e); }}
-        onMouseLeave={handleMouseLeave}
-        className="relative my-auto w-full max-w-sm transition-transform duration-200 ease-out p-[1.5px] rounded-3xl overflow-hidden shadow-2xl"
-        style={{
-          ...gradientBorderStyle,
-          perspective: '1000px',
-          transform: isHovered 
-            ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`
-            : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
-        }}
+        className="relative my-auto w-full max-w-sm p-[1.5px] rounded-3xl overflow-hidden shadow-2xl"
+        style={gradientBorderStyle}
       >
-        {/* Dynamic 3D Light Sheen Glare */}
-        {isHovered && (
-          <div 
-            className="absolute inset-0 pointer-events-none z-30 opacity-30 transition-opacity duration-300"
-            style={{
-              background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 65%)`
-            }}
-          />
-        )}
-
         {/* Card Body with Mobile Scroll Container */}
         <div className="bg-[#101115] text-white rounded-3xl p-5 sm:p-6 md:p-7 flex flex-col items-center text-center max-h-[92vh] overflow-y-auto overscroll-contain custom-scrollbar relative z-20">
           
@@ -166,7 +121,7 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
             </div>
 
             {/* 3D Cat Sphere Container */}
-            <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-b from-[#ffbb44] via-[#f7971e] to-[#e65c00] border-2 border-amber-300/80 shadow-2xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300 animate-float-3d">
+            <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-b from-[#ffbb44] via-[#f7971e] to-[#e65c00] border-2 border-amber-300/80 shadow-2xl flex items-center justify-center animate-float-3d">
               {/* Twitching 3D Cat Ears */}
               <div className="absolute -top-3.5 left-2 w-5 h-6 bg-[#ffbb44] border-t-2 border-l-2 border-amber-200 rounded-tl-full transform -rotate-12 animate-ear-left">
                 <div className="w-2.5 h-3.5 bg-rose-400/80 rounded-tl-full mt-1.5 ml-1" />
@@ -265,10 +220,10 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
             </button>
           </div>
 
-          {/* 3D Action Buttons */}
+          {/* Action Buttons */}
           <button
             onClick={handleStartWithMusic}
-            className="w-full py-3.5 bg-white text-black hover:bg-white/95 font-black text-[16px] sm:text-[17px] rounded-full transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-xl cursor-pointer flex items-center justify-center gap-2 transform active:translate-y-0.5"
+            className="w-full py-3.5 bg-white text-black hover:bg-white/95 font-black text-[16px] sm:text-[17px] rounded-full transition-colors active:scale-95 shadow-xl cursor-pointer flex items-center justify-center gap-2"
           >
             <span>Start Game</span>
             <span>🚀</span>
@@ -277,11 +232,11 @@ const SoloStartOverlay: React.FC<SoloStartOverlayProps> = ({
 
           <button
             onClick={onOpenMultiplayer}
-            className="w-full py-3 px-4 rounded-full bg-gradient-to-r from-[#4285F4]/20 via-[#BB55A1]/20 to-[#4285F4]/20 hover:from-[#4285F4]/35 hover:to-[#BB55A1]/35 border border-[#4285F4]/40 hover:border-[#4285F4] text-white font-bold text-[13px] transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-lg cursor-pointer group"
+            className="w-full py-3 px-4 rounded-full bg-gradient-to-r from-[#4285F4]/20 via-[#BB55A1]/20 to-[#4285F4]/20 hover:from-[#4285F4]/30 hover:to-[#BB55A1]/30 border border-[#4285F4]/40 hover:border-[#4285F4] text-white font-bold text-[13px] transition-colors active:scale-95 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
           >
             <span className="text-base">👥</span>
             <span>Race with friends? Open Multiplayer Room</span>
-            <span className="text-xs text-white/50 group-hover:translate-x-0.5 transition-transform">→</span>
+            <span className="text-xs text-white/50">→</span>
           </button>
         </div>
       </div>

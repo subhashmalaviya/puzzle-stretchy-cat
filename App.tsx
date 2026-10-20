@@ -19,6 +19,7 @@ import SoloStartOverlay from './components/SoloStartOverlay';
 import MatchCountdownOverlay from './components/MatchCountdownOverlay';
 import MultiplayerMatchEndModal from './components/MultiplayerMatchEndModal';
 import multiplayerService from './services/multiplayerService';
+import bgmService from './services/bgmService';
 import { 
   GAME_CONSTANTS, 
   getStageTotalLevels, 
@@ -123,6 +124,21 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => { preloadCache(audioFiles); }, []);
+
+  // Auto-play background music on first interaction (complies with browser AudioContext policy)
+  useEffect(() => {
+    const handleFirstGesture = () => {
+      if (!bgmService.isMuted()) {
+        bgmService.play();
+      }
+    };
+    window.addEventListener('pointerdown', handleFirstGesture, { once: true });
+    window.addEventListener('keydown', handleFirstGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handleFirstGesture);
+      window.removeEventListener('keydown', handleFirstGesture);
+    };
+  }, []);
 
   // Subscribe to multiplayer room updates and notifications
   useEffect(() => {
@@ -349,16 +365,20 @@ const App: React.FC = () => {
     multiplayerService.updateProgress(gameState.score, nextStage, 1, 'playing');
   };
 
-  // Solo Start handler: starts continuous countdown clock!
+  // Solo Start handler: starts continuous countdown clock & plays music automatically!
   const handleSoloStart = () => {
+    bgmService.unmute();
+    bgmService.play();
     setIsSoloStarted(true);
     setTimerStarted(true);
     setLevelStartTime(Date.now());
     setTimeLeft(getStageInitialTime(stage));
   };
 
-  // Multiplayer Countdown Complete handler: starts continuous countdown clock!
+  // Multiplayer Countdown Complete handler: starts continuous countdown clock & plays music!
   const handleMatchCountdownComplete = useCallback(() => {
+    bgmService.unmute();
+    bgmService.play();
     setIsMatchCountdown(false);
     setIsSoloStarted(true);
     setTimerStarted(true);
@@ -696,7 +716,7 @@ const App: React.FC = () => {
       />
 
       {/* Main Grid View */}
-      <main className="absolute top-[52px] md:top-[64px] bottom-[100px] md:bottom-[120px] left-0 right-0 flex flex-col items-center justify-center p-2">
+      <main className="absolute top-[46px] sm:top-[54px] md:top-[64px] bottom-[64px] sm:bottom-[76px] md:bottom-[96px] left-0 right-0 flex flex-col items-center justify-center p-2 select-none overflow-hidden">
         <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} flex flex-col items-center`}>
           <Grid
             level={level}
@@ -719,13 +739,13 @@ const App: React.FC = () => {
             }}
           />
           {timeLeft !== null && (
-            <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full font-bold mt-2 shadow-lg transition-colors duration-300 ${
+            <div className={`flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-bold mt-2 shadow-lg transition-colors duration-300 ${
               timeLeft <= 5 && timerStarted ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-black'
             }`}>
-              <TimerIcon className="w-4 h-4" />
-              <span className="text-[16px] tabular-nums">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+              <TimerIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-[14px] sm:text-[16px] tabular-nums">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
               {!timerStarted && (
-                <span className="text-[11px] uppercase tracking-wider font-extrabold bg-black/10 px-1.5 py-0.5 rounded-full ml-1">
+                <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-extrabold bg-black/10 px-1.5 py-0.5 rounded-full ml-1">
                   Ready
                 </span>
               )}
@@ -735,7 +755,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Bottom Footer with Stage, Level, Score, and Reset button */}
-      <div className="fixed bottom-[16px] md:bottom-[36px] left-0 right-0 z-[10] flex justify-center pointer-events-none px-4 md:px-6">
+      <div className="fixed bottom-[10px] sm:bottom-[16px] md:bottom-[28px] left-0 right-0 z-[10] flex justify-center pointer-events-none px-2 sm:px-4 md:px-6">
         <div className="pointer-events-auto">
           <FooterLeftContent 
             stage={stage}

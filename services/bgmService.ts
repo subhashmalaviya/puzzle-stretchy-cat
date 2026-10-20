@@ -157,6 +157,27 @@ class BGMService {
     this.notify();
   }
 
+  public unmute() {
+    this.initContext();
+    this.isMutedState = false;
+
+    try {
+      localStorage.setItem('stretchy_cat_bgm_muted', 'false');
+    } catch {}
+
+    if (this.masterGain && this.ctx) {
+      const now = this.ctx.currentTime;
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.linearRampToValueAtTime(0.22, now + 0.1);
+    }
+
+    if (!this.isPlaying) {
+      this.play();
+    }
+
+    this.notify();
+  }
+
   public toggleMute(): boolean {
     this.initContext();
     this.isMutedState = !this.isMutedState;

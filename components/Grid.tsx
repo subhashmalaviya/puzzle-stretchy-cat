@@ -42,17 +42,18 @@ const Grid: React.FC<GridProps> = ({
   const { tileSize, gap } = useMemo(() => {
     const maxDim = Math.max(level.width, level.height);
     
-    // Keep the 90% width as it was good
-    const horizontalLimit = windowSize.width * 0.90 - 20; //10 px padding in parent
+    // Width limit: 92% of screen width, max 500px for desktop
+    const horizontalLimit = Math.min(windowSize.width * 0.92 - 16, 500);
     
-    // CHANGED: 320 is the sweet spot between original (380) and too big (260)
-    const verticalLimit = windowSize.height - 320; 
+    // Height limit: dynamically reserve space for top bar, timer, and footer
+    const reservedVertical = windowSize.height < 650 ? 175 : windowSize.height < 800 ? 210 : 250;
+    const verticalLimit = Math.max(windowSize.height - reservedVertical, 220);
     
     const containerSize = Math.min(horizontalLimit, verticalLimit);
     const calculatedTileSize = Math.floor(containerSize / maxDim);
-    const calculatedGap = Math.max(2, Math.floor(calculatedTileSize / 12));
+    const calculatedGap = Math.max(2, Math.floor(calculatedTileSize / 11));
 
-    return { tileSize: Math.max(calculatedTileSize, 20), gap: calculatedGap };
+    return { tileSize: Math.max(calculatedTileSize, 26), gap: calculatedGap };
   }, [level.width, level.height, windowSize]);
 
   const getPathIndex = (x: number, y: number) => path.findIndex(p => p.x === x && p.y === y);
