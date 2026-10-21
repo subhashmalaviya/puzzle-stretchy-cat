@@ -15,6 +15,7 @@ interface GameOverProps {
   onAction: () => void;
   onOpenHistory?: () => void;
   onOpenLeaderboard?: () => void;
+  onWatchAdForExtraTime?: () => void;
 }
 
 const GameOver: React.FC<GameOverProps> = ({ 
@@ -27,6 +28,7 @@ const GameOver: React.FC<GameOverProps> = ({
   onAction,
   onOpenHistory,
   onOpenLeaderboard,
+  onWatchAdForExtraTime,
 }) => {
   const isWin = type === 'win';
   const isNewBest = score >= bestScore && score > 0;
@@ -68,11 +70,20 @@ const GameOver: React.FC<GameOverProps> = ({
         </div>
 
         <div className="mt-[25px] flex flex-col gap-2.5 items-center w-full px-4 max-w-[280px]">
+          {!isWin && onWatchAdForExtraTime && (
+            <button
+              onClick={onWatchAdForExtraTime}
+              className="flex justify-center items-center py-3.5 w-full cursor-pointer bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 text-black font-extrabold text-[15px] rounded-full transition-all duration-200 hover:brightness-110 active:scale-95 shadow-[0_0_20px_rgba(251,188,4,0.35)] gap-2"
+            >
+              <span>▶️</span> Watch Ads for +15s More Time
+            </button>
+          )}
+
           <button
             onClick={onAction}
-            className="flex justify-center items-center py-3.5 w-full cursor-pointer bg-white text-black font-bold text-[17px] rounded-full transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg"
+            className="flex justify-center items-center py-3 w-full cursor-pointer bg-white text-black font-bold text-[16px] rounded-full transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg"
           >
-            {isWin ? 'Play Again' : 'Retry'}
+            {isWin ? 'Play Again' : 'Retry from Start'}
           </button>
 
           {onOpenLeaderboard && (

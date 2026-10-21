@@ -18,8 +18,11 @@ import MultiplayerToast from './components/MultiplayerToast';
 import SoloStartOverlay from './components/SoloStartOverlay';
 import MatchCountdownOverlay from './components/MatchCountdownOverlay';
 import MultiplayerMatchEndModal from './components/MultiplayerMatchEndModal';
+import GoogleAdBanner from './components/GoogleAdBanner';
+import GoogleRewardedAdModal from './components/GoogleRewardedAdModal';
 import multiplayerService from './services/multiplayerService';
 import bgmService from './services/bgmService';
+import adService from './services/adService';
 import { 
   GAME_CONSTANTS, 
   getStageTotalLevels, 
@@ -74,6 +77,18 @@ const App: React.FC = () => {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [multiplayerModalTab, setMultiplayerModalTab] = useState<'create' | 'join'>('create');
+
+  // Google Ads Monetization states
+  const [isRewardedAdOpen, setIsRewardedAdOpen] = useState(false);
+  const [reviveCount, setReviveCount] = useState(0);
+  const [isBottomAdVisible, setIsBottomAdVisible] = useState(adService.isBottomBannerVisible());
+
+  useEffect(() => {
+    const unsub = adService.subscribe(() => {
+      setIsBottomAdVisible(adService.isBottomBannerVisible());
+    });
+    return () => unsub();
+  }, []);
 
   // Multiplayer room state and toast notifications
   const [multiplayerRoom, setMultiplayerRoom] = useState<RoomState | null>(null);
@@ -338,6 +353,8 @@ const App: React.FC = () => {
 
     setGameResult(null);
     setIsStageClearOpen(false);
+    setIsRewardedAdOpen(false);
+    setReviveCount(0);
     setTimeLeft(getStageInitialTime(1));
     collectedMap.current.clear();
     isWinProcessed.current = false;
@@ -510,16 +527,41 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [hasStarted, gameResult, timeLeft, timerStarted, isPaused]);
 
-  // When continuous time runs out, save score to history tab and report timeout
+  // Google Ads: Player completed the 30s rewarded ad and earned +15 seconds more
+  const handleRewardGranted = (extraSeconds: number = 15) => {
+    setIsRewardedAdOpen(false);
+    setGameResult(null);
+    setReviveCount(prev => prev + 1);
+    setTimeLeft(extraSeconds);
+    setTimerStarted(true);
+    setMultiplayerToast({
+      id: Math.random().toString(),
+      message: `⏱️ +${extraSeconds}s Extra Time Added! Keep Stretching!`,
+      type: 'stage',
+      timestamp: Date.now()
+    });
+    setTimeout(() => setMultiplayerToast(null), 3500);
+  };
+
+  // Google Ads: Player declined or skipped the 30s ad before completion
+  const handleRewardedAdDeclineOrSkip = () => {
+    setIsRewardedAdOpen(false);
+    recordHistoryRun(gameState.score, stage, levelIndex, 'timeout');
+    multiplayerService.updateProgress(gameState.score, stage, levelIndex, 'timeout');
+    setGameResult('lose');
+  };
+
+  // When continuous time runs out in solo mode: offer 30s Google Ad for +10s extra time
   useEffect(() => {
     if (timeLeft === 0 && !gameState.isWon && hasStarted && !isTransitioning && !gameResult && timerStarted) {
-      recordHistoryRun(gameState.score, stage, levelIndex, 'timeout');
-      setTimerStarted(false);
       if (multiplayerRoom) {
+        recordHistoryRun(gameState.score, stage, levelIndex, 'timeout');
+        setTimerStarted(false);
         multiplayerService.reportTimeout(gameState.score, stage, levelIndex);
       } else {
-        multiplayerService.updateProgress(gameState.score, stage, levelIndex, 'timeout');
-        setGameResult('lose');
+        // Solo mode: time complete! Pause clock and trigger 30s Google Ad for +10s extra time
+        setTimerStarted(false);
+        setIsRewardedAdOpen(true);
       }
     }
   }, [timeLeft, gameState.isWon, hasStarted, isTransitioning, gameResult, timerStarted, gameState.score, stage, levelIndex, recordHistoryRun, multiplayerRoom]);
@@ -749,6 +791,10 @@ const App: React.FC = () => {
           onAction={handleFullReset} 
           onOpenHistory={() => setIsHistoryOpen(true)}
           onOpenLeaderboard={multiplayerRoom ? () => setIsMultiplayerOpen(true) : undefined}
+          onWatchAdForExtraTime={!multiplayerRoom ? () => {
+            setGameResult(null);
+            setIsRewardedAdOpen(true);
+          } : undefined}
         />
       )}
 
@@ -776,7 +822,7 @@ const App: React.FC = () => {
       />
 
       {/* Main Grid View */}
-      <main className="absolute top-[46px] sm:top-[52px] md:top-[58px] bottom-[56px] sm:bottom-[66px] md:bottom-[76px] left-0 right-0 flex flex-col items-center justify-center p-2 select-none">
+      <main className={`absolute top-[46px] sm:top-[52px] md:top-[58px] ${isBottomAdVisible ? 'bottom-[104px] sm:bottom-[116px] md:bottom-[124px]' : 'bottom-[56px] sm:bottom-[66px] md:bottom-[76px]'} left-0 right-0 flex flex-col items-center justify-center p-2 select-none transition-all duration-300`}>
         <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} flex flex-col items-center justify-center mt-7 sm:mt-0`}>
           <Grid
             level={level}
@@ -823,7 +869,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Bottom Footer with Stage, Level, Score, and Reset button */}
-      <div className="fixed bottom-[10px] sm:bottom-[16px] md:bottom-[28px] left-0 right-0 z-[10] flex justify-center pointer-events-none px-2 sm:px-4 md:px-6">
+      <div className={`fixed ${isBottomAdVisible ? 'bottom-[56px] sm:bottom-[64px] md:bottom-[70px]' : 'bottom-[10px] sm:bottom-[16px] md:bottom-[28px]'} left-0 right-0 z-[10] flex justify-center pointer-events-none px-2 sm:px-4 md:px-6 transition-all duration-300`}>
         <div className="pointer-events-auto">
           <FooterLeftContent 
             stage={stage}
@@ -920,6 +966,30 @@ const App: React.FC = () => {
         currentPlayerId={myProfile.id}
         onRematch={handleRematch}
         onLeaveRoom={handleLeaveRoomFromMatchEnd}
+      />
+
+      {/* Google Ads Mode - Bottom Banner Ad (Runs continuously) */}
+      <GoogleAdBanner 
+        onAdClicked={(camp) => {
+          setMultiplayerToast({
+            id: Math.random().toString(),
+            message: `Opening ${camp.title}...`,
+            type: 'info',
+            timestamp: Date.now()
+          });
+          setTimeout(() => setMultiplayerToast(null), 3000);
+        }}
+      />
+
+      {/* Google Rewarded Ad (30-second Ad -> +15 Seconds Extra Time) */}
+      <GoogleRewardedAdModal
+        isOpen={isRewardedAdOpen}
+        score={gameState.score}
+        stage={stage}
+        levelId={levelIndex}
+        reviveCount={reviveCount}
+        onRewardGranted={handleRewardGranted}
+        onDeclineOrSkip={handleRewardedAdDeclineOrSkip}
       />
     </div>
   );
